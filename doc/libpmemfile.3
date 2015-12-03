@@ -1,0 +1,512 @@
+.\"
+.\" Copyright (c) 2015, Intel Corporation
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\"
+.\"     * Redistributions of source code must retain the above copyright
+.\"       notice, this list of conditions and the following disclaimer.
+.\"
+.\"     * Redistributions in binary form must reproduce the above copyright
+.\"       notice, this list of conditions and the following disclaimer in
+.\"       the documentation and/or other materials provided with the
+.\"       distribution.
+.\"
+.\"     * Neither the name of Intel Corporation nor the names of its
+.\"       contributors may be used to endorse or promote products derived
+.\"       from this software without specific prior written permission.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+.\" "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+.\" LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+.\" A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+.\" OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+.\" SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+.\" LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+.\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+.\" OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.\"
+.\" libpmemfile.3 -- man page for libpmemfile
+.\"
+.\" Format this man page with:
+.\"	man -l libpmemfile.3
+.\" or
+.\"	groff -man -Tascii libpmemfile.3
+.\"
+.TH libpmemfile 3 libpmemfile version 0.1" "NVM Library"
+.SH NAME
+libpmemfile \- File Direct API
+.B #include <>
+.sp
+.B [put stuff in here]
+.sp
+.sp
+.SH DESCRIPTION
+.PP
+.B libpmemfile
+.T Provides a direct access to persistent memory via the standard file system and
+file interface for applications using direct access storage(DAX),
+which supports load/store access without paging blocks from a storage device.
+Applications will not require any change to make use of this new file system.
+This file system provides direct access to persistent memory using load/store,
+non-paged access to the persistent memory device.
+This library is for applications that need transnational access
+and persistent memory management without requiring modifications.
+
+.BI libpmemfile
+supports all system calls with exceptions noted below.
+The section lays out the underlying system call and the expected behavior.
+.sp
+.sp
+.SH EXCEPTIONS TO SUPPORTED FILE OPERATIONS
+This section outlines the exceptions to the noted file operations.
+.br
+.SS File System Operations
+.sp
+.B Exceptions
+.sp
+.B int mount(const char *source, const char *target,
+.RS 10
+const char *filesystemtype, unsigned long mountflags,
+.RE
+.RS 10
+const void *data);
+.RE
+.B int umount(const char *target);
+.br
+.B int unmount2(const char *target, int flags)
+.sp
+.I The standard file system operations do not apply to the persistent memory file
+system. A persistent memory device is made available via the mechanism that
+is used to create and configure the persistent memory device. The
+persistent memory space will be available under a well-known path, TBD.
+.sp
+.SS File Attributes
+.sp
+.B int access(const char *pathname, int mode);
+.br
+.BI "The access()"
+system call is supported.
+.sp
+.B Exceptions
+.sp
+.I libpmemfile bases the file permissions on the access to the pool.
+All files within a pool have the same permissions.
+.IP "RETURN VALUE"
+.RS 5
+As defined in the access(2) manpage.
+.RE
+.IP "ERRORS"
+.br
+.RS 5
+As defined in the access(2) manpage.
+.RE
+.SS Directory Operations
+.B int chroot(const char *path);
+.sp
+.B Exception
+.br
+.BI chroot()
+system call is not supported.
+.IP "RETURN VALUE"
+-1
+.IP ERRORS
+.br
+ENOTSUP Not Supported.
+.SS Asynchronous I/O
+.B Need to research this to see if we would end up in infinite recursion.
+.sp
+.SS Creating child processes
+.B Exception
+.BI "clone() and fork()"
+are supported with the libpmemfile file system with the following behavioral
+exceptions noted below. libpmemfile does not provide multi-process support.
+.sp
+.B int clone(int (*fn)(void *), void *child_stack, int flags, void *arg, ...
+.RS 10
+.B /* pid_t *ptid, struct user_desc *tls, pid_t *ctid */ );
+.RE
+.B Clone will operate as expected with the following exceptions for the flags
+.IP \[bu]
+.BI CLONE_FILES
+will always be set. This flag ensures that any activity on a file descriptor
+in either process will be valid in the other process.
+.IP \[bu]
+.BI CLONE_FS
+Will always be set.
+.IP \[bu]
+CLONE_NEWIPC
+Is not supported.
+.IP \[bu]
+CLONE_NEWNET
+Is not supported.
+.IP \[bu]
+CLONE_NEWNS
+Is not supported
+.IP \[bu]
+CLONE_NEWUSER
+Is not supported
+.IP \[bu]
+CLONE_STTLS
+Not sure?
+.IP \[bu]
+CLONE_VFORK
+Is not supported.
+.B pid_t fork(void);
+.B When fork() is called all all file descriptors in a forked process will be
+marked as not available.  This will ensure that an application cannot open
+new files or reuse other file descriptors which could lead to corruption.
+.br
+.B pid_t vfork(void);
+.B vfork()
+is not supported.
+.IP "RETURN VALUE"
+.RS 5
+-1 for all unsupported FLAGS. Otherwise, as defined in the fork(2) and
+clone(2) man pages.
+.RE
+.IP "ERRORS"
+.br
+.RS 5
+ENOTSUP Not supported for all unsupported flags, otherwise as defined in
+the fork(2)and clone(2) man pages.
+.RE
+.SS I/O Event Notification
+.sp
+.BI "I/O event notification"
+is not supported, which includes the following system calls:
+.sp
+.B int epoll_create(int size);
+.br
+.B int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event);
+.br
+.B int epoll_wait(int epfd, struct epoll_event *events, int maxevents,
+.RS 14
+int timeout);
+.RE
+.br
+.B int epoll_pwait(int epfd, struct epoll_event *events, int maxevents,
+.RS 15
+int timeout, const sigset_t *sigmask);
+.RE
+.br
+.B int fanotify_init(unsigned int flags, unsigned int event_f_flags);
+.br
+.B int fanotify_mark(int fanotify_fd, unsigned int flags,
+.RS 17
+int dirfd, const char *pathname);
+.RE
+.br
+.B int inotify_init(void);
+.br
+.B int inotify_init1(int flags);
+.br
+.B int inotify_add_watch(int fd, const char *pathname, uint32_t mask);
+.br
+.B int inotify_rm_watch(int fd, int wd);
+.br
+.B int poll(struct pollfd *fds, nfds_t nfds, int timeout);
+.br
+.B int ppoll(struct pollfd *fds, nfds_t nfds,
+.RS 10
+const struct timespec *timeout_ts, const sigset_t *sigmask);
+.RE
+.B int eventfd(unsigned int initval, int flags);
+.sp
+.IP "RETURN VALUE"
+.RS 5
+-1
+.RE
+.IP "ERRORS"
+.RS 5
+ENOTSUP Not Supported.
+.RE
+.SS Program Execution
+.bi "Execution of a program"
+is not supported when the file resides on pmem.
+.sp
+.B int execve(const char *filename, char *const argv[],
+.RS 11
+char *const envp[]);
+.RE
+.IP "RETURN VALUE"
+XXX In the case the call to execve includes a file or directory in the pmem
+space, we have to find a way to keep that open. All pmem files are close on
+exec.
+.IP "ERRORS"
+.br
+XXXXX how do we notify a user of an error? Do we throw an error if they
+want to do something with a file or directory in pmem?
+.SS Extended Attributes
+.BI "Management"
+of extended attributes are not supported. These are:
+.sp
+.B ssize_t lgetxattr(const char *path, const char *name, void  *value,
+.RS 18
+size_t size);
+.RE
+.br
+.B ssize_t fgetxattr(int fd, const char *name, void *value, size_t size);
+.br
+.B ssize_t listxattr(const char *path, char *list, size_t size);
+.br
+.B ssize_t llistxattr(const char *path, char *list, size_t size);
+.br
+.B ssize_t flistxattr(int fd, char *list, size_t size);
+.br
+.B int setxattr(const char *path, const char *name, const void *value,
+.RS 13
+size_t size, int flags);
+.RE
+.br
+.B int lsetxattr(const char *path, const char *name, const void *value,
+.RS 14
+size_t size, int flags);
+.RE
+.br
+.B int fsetxattr(int fd, const char *name, const void *value, size_t size,
+.RS 14
+int flags);
+.RE
+.br
+.IP "RETURN VALUE"
+.RS 5
+ -1
+.RE
+.IP ERRORS
+.RS 5
+ENOTSUP Not supported.
+.RE
+.SS Flushing of Data and Meta-data
+.B Exception
+.sp
+.BI "Flush"
+of data and meta-data always succeed. This is due to the fact that all data
+and meta-data is written synchronously with libpmemfile.
+.sp
+.B void sync(void);
+.br
+.B int sync_file_range(int fd, off64_t offset, off64_t nbytes,
+.RS 20
+unsigned int flags);
+.RE
+.B int syncfs(int fd);
+.br
+.B int fsync(int fd);
+.br
+.B int fdatasync(int fd);
+.IP "RETURN VALUE"
+.RS 5
+0
+.RE
+.IP ERRORS
+.RS 5
+NONE
+.RE
+.SS int ioctl(int d, int request, ...);
+.BI "The ioctl()"
+system call is not supported.
+.IP "RETURN VALUE"
+-1
+.IP ERRORS
+.br
+ENOTSUP Not supported.
+.br
+.SS Special Files
+.BI "The system calls that manage block or character special files"
+are not supported.
+.br
+.B int mknod(const char *pathname, mode_t mode, dev_t dev);
+.br
+.B int mknodat(int dirfd, const char *pathname, mode_t mode, dev_t dev);
+.br
+.IP "RETURN VALUE"
+.RS 5
+-1
+.RE
+.IP ERRORS
+.br
+.RS 5
+ENOTSUP Not supported.
+.RE
+.SS Mapping Devices into Memory
+.BI "The mmap() and munmap()"
+system calls are not supported.
+.sp
+.B void *mmap(void *addr, size_t length, int prot, int flags,
+.RS 15
+int fd, off_t offset);
+.RE
+.br
+.B int munmap(void *addr, size_t length);
+.br
+.B void *mremap(void *old_address, size_t old_size,
+.RS 13
+size_t new_size, int flags, ... /* void *new_address */);
+.RE
+.B int msync(void *addr, size_t length, int flags);
+.IP "RETURN VALUE"
+.RS 5
+-1
+.RE
+.IP ERRORS
+.br
+.RS 5
+ENOTSUP Not supported.
+.RE
+.sp
+.SS Create, Open and Close Files
+.BI "The open() and creat()"
+system calls are supported. Noted in this section are the flags and mode
+bits that are not supported or have different behavior than expected.
+.sp
+.B int open(const char *pathname, int flags);
+.br
+.B int open(const char *pathname, int flags, mode_t mode);
+.br
+.B int creat(const char *pathname, mode_t mode);
+.br
+.B int openat(int dirfd, const char *pathname, int flags);
+.br
+.B int openat(int dirfd, const char *pathname, int flags, mode_t mode);
+.sp
+.BI FLAGS and MODE Bits Exceptions
+.IP \[bu]
+.B O_ASYNC
+.RS 10
+Not Supported
+.RE
+.IP \[bu]
+.B O_CLOEXEC
+.RS 10
+All persistent memory files are close on exec.
+.RE
+.IP \[bu]
+.B O_DIRECT
+.RS 10
+We never go through page cache.
+What does ignoring this mean to applications.
+Do We have to worry about alignment?
+.br
+.BI NOTE:
+Used generally when apps manage their own caches. Such as sql. No issue
+in this case.
+.RE
+.IP \[bu]
+.B O_EXCL
+.br
+.RS 10
+.B I think we support this.
+.RE
+.IP \[bu]
+.B O_NOCTTY
+.RS 10
+Not Supported
+.RE
+.IP \[bu]
+.B O_NONBLOCK or O_NDELAY
+.RS 10
+.B It would this would always be true ?
+.RE
+.IP \[bu]
+.B O_PATH
+.RS 10
+flag will behave the same as is documented in the open(2)
+manpage. However, the use of the file descriptor returned as a result of
+this flag cannot be used to pass to another process via a UNIX domain socket.
+libpmemfile does not provide UNIX socket support.
+.RE
+.IP \[bu]
+.B O_SYNC
+.RS 10
+All operations are synchronous. Setting this has no effect.
+.RE
+.IP \[bu]
+.B O_TTY_INIT
+.RS 10
+Not Supported.
+.RE
+.sp
+.BI "MODE FLAGS"
+.sp
+.B Exception
+.sp
+.I "The constants used to set file mode"
+are set to the mode of the containing persistent memory pool. Therefore
+these must be set at pool create rather than file creation.
+.br
+.sp
+.BI Exception
+.br
+If the execute bit is set it will be ignored. Files that reside
+on persistent memory cannot be executed.
+.sp
+.SS Synchronous I/O Multiplexing
+.BI "Monitoring"
+of multiple file descriptors for use in a program for readiness for some
+class of I/O operation is not supported. This includes:
+.sp
+.B int select(int nfds, fd_set *readfds, fd_set *writefds,
+.br
+.RS 10
+fd_set *exceptfds, struct timeval *timeout);
+.RE
+.B int pselect(int nfds, fd_set *readfds, fd_set *writefds,
+.RS 11
+fd_set *exceptfds, const struct timespec *timeout,
+.RE
+.RS 11
+const sigset_t *sigmask);
+.RE
+.B void FD_CLR(int fd, fd_set *set);
+.br
+.B int FD_ISSET(int fd, fd_set *set);
+.br
+.B void FD_SET(int fd, fd_set *set);
+.br
+.B void FD_ZERO(fd_set *set);
+.br
+.SS File I/O
+.BI "All File I/O"
+operations are are supported except the noted exceptions.
+.sp
+.BI Exceptions
+.sp
+.B  ssize_t readahead(int fd, off64_t offset, size_t count);
+.br
+libpmemfile does not support page caching. It is a direct access file API
+and no page cache is involved.
+.IP "RETURN VALUE"
+-1
+.IP ERRORS
+.br
+.RS 5
+ENOTSUP Not supported.
+.RE
+.sp
+.B  int rename(const char *oldpath, const char *newpath);
+.br
+.B int renameat(int olddirfd, const char *oldpath,
+.RS 12
+int newdirfd, const char *newpath);
+.RE
+.B  int renameat(int olddirfd, const char *oldpath,
+.RS 14
+int newdirfd, const char *newpath);
+.RE
+libpmemfile support rename except in the case where one of the paths
+is not located in the same file system.
+.sp
+.IP "RETURN VALUE"
+-1 For the case above
+.sp
+.IP ERRORS
+.br
+.RS 5
+EACCESS No Access.
+The file system containing the pathname does not support renaming of the type
+requested.
