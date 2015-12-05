@@ -240,6 +240,26 @@ Development files for NVML libpmemblk library
 %{_includedir}/libpmemblk.h
 %{_mandir}/man3/libpmemblk.3.gz
 
+%package -n libpmemfile-devel
+Summary: libpmemfile development library
+Group: Development/Libraries
+%description -n libpmemfile-devel
+Development files for NVML libpmemfile library
+
+%files -n libpmemfile-devel
+%defattr(-,root,root,-)
+%{_mandir}/man3/libpmemfile.3.gz
+
+%package -n libpmemfs-devel
+Summary: libpmemfs development library
+Group: Development/Libraries
+%description -n libpmemfs-devel
+Development files for NVML libpmemfs library
+
+%files -n libpmemfs-devel
+%defattr(-,root,root,-)
+%{_mandir}/man3/libpmemfs.3.gz
+
 %package -n libpmemlog
 Summary: libpmemlog library
 Group: %{package_group}/Libraries

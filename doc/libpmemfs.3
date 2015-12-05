@@ -1,0 +1,191 @@
+.\"
+.\" Copyright 2016, Intel Corporation
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\"
+.\"	* Redistributions of source code must retain the above copyright
+.\"	  notice, this list of conditions and the following disclaimer.
+.\"
+.\"	* Redistributions in binary form must reproduce the above copyright
+.\"	  notice, this list of conditions and the following disclaimer in
+.\"	  the documentation and/or other materials provided with the
+.\"	  distribution.
+.\"
+.\"	* Neither the name of the copyright holder nor the names of its
+.\"	  contributors may be used to endorse or promote products derived
+.\"	  from this software without specific prior written permission.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+.\" "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+.\" LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+.\" A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+.\" OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+.\" SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+.\" LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+.\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+.\" OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.\"
+.\" libpmemfs.3 -- man-page for libpmemfs
+.\"
+.\" Format this man-page with:
+.\" man -l libpmemfs.3
+.\" or
+.\" groff -man -Tascii libpmemfs.3
+.\"
+.TH libpmemfs 3 "libpmemfs version 0.1" "NVM Library"
+.SH NAME
+libpmemfs \- File System Direct API
+.br
+.sp
+.SH DESCRIPTION
+.PP
+.B libpmemfs
+provides direct access to
+.I persistent memory
+(pmem)
+file systems.
+This library is intended for applications that want to store files on
+pmem without kernel overhead (system call interface, file system and block layer)
+and application source code modifications.
+.sp
+.SH EXCEPTIONS TO SUPPORTED FILE SYSTEM OPERATIONS
+This section outlines the exceptions to the specified file operations.
+.br
+.SS File System Operations
+.sp
+.br
+.BI "int mount(const char *" source ", const char *" target ","
+.RS  10
+.BI "const char *" filesystemtype ", unsigned long " mountflags ","
+.RE
+.RS 10
+.BI "const void *" data );
+.RE
+.BI "int umount(const char *" target );
+.br
+.BI "int unmount2(const char *" target ", int " flags )
+.br
+.sp
+.B libpmemfs
+is a transactional memory pool whose objects represent files and directories.
+As such
+.B libpmemfs
+does not support standard file system operations.
+.sp
+A pool must be created first and it must be created with a specific
+path with the following syntax:
+.B <PATH::POOLNAME>
+This will be exported via the following environment variable:
+.B PMEM_FS.
+A
+.B libpmemfs
+file system does not show up as a mount. It is a memory mapped file
+which is accessed via the PMEM_FS path.
+.RE
+.SS mkfs.pmem(3).
+This is used to create the transactional object store pool.
+.sp
+.B mkfs.pmem [options] [fs-flags] [fs-options] [path] [size]
+.SS OPTIONS
+.B -V --verbose
+Produce  verbose output
+.sp
+.B -h --help
+.sp
+.B fs-flags
+.br
+.B libpmemfs
+does not support mount however, it does support the following flags
+that provide specific file system attributes:
+.IP \[bu]
+MS_BIND
+.RS 10
+Not supported.
+.RE
+.IP \[bu]
+MS_DIRSYNC
+.RS 10
+.B libpmemfs
+acts as if this flag is always on.
+.RE
+.IP \[bu]
+MS_MANDLOCK
+.RS 10
+Not supported.
+.RE
+.IP \[bu]
+MS_MOVE
+.RS 10
+Not supported.
+.RE
+.IP \[bu]
+MS_NOATIME
+.RS 10
+Supported.
+.RE
+.IP \[bu]
+MS_NODEV
+.RS 10
+.B libpmemfs
+acts as if this flag is always on.
+.RE
+.IP \[bu]
+MS_NODIRATIME
+.RS 10
+Supported.
+.RE
+.IP \[bu]
+MS_NOEXEC
+.RS 10
+.B libpmemfs
+acts as if this flag is always on.
+.RE
+.IP \[bu]
+MS_NOSUID
+.RS 10
+.B libpmemfs
+acts as if this flag is always on.
+.RE
+.IP \[bu]
+MS_RDONLY
+.RS 10
+.B libpmemfs
+ensures that when a pmem file system pool is created it
+always has read and write permissions.
+.RE
+.IP \[bu]
+MS_RELATIME
+.RS 10
+Not supported.
+.RE
+.IP \[bu]
+MS_REMOUNT
+.RS 10
+A
+.B libpmemfs
+file system is not mounted as a standard file system. Once created it's the
+pmem file system pool can be opened, closed and deleted.
+Not supported.
+.RE
+.IP \[bu]
+MS_SILENT
+.RS 10
+Not supported. All errors are logged.
+.RE
+.IP \[bu]
+MS_STRICTATIME
+.RS 10
+.B libpmemfs
+acts as if this flag is always true when the MS_ATIME is set.
+.RE
+.IP \[bu]
+MS_SYNCHRONOUS
+.RS 10
+.B libpmemfs
+acts as if this flag is always on.
+.RE

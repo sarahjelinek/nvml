@@ -1,0 +1,530 @@
+libpmemfile(3)              Library Functions Manual              libpmemfile(3)
+
+
+
+NAME
+       libpmemfile - File Direct API
+
+
+DESCRIPTION
+       libpmemfile  provides  direct access to persistent memory (pmem) resident
+       files via standard file interfaces.  This library is intended for  appli‐
+       cations  that want to store files on pmem without kernel overhead (system
+       call interface, file system and block layer) and application source  code
+       modifications.
+
+
+EXCEPTIONS TO SUPPORTED FILE OPERATIONS
+       This section outlines the exceptions to the specified file operations.
+
+
+   File Attributes
+       Owner, group and permission bits are handled as follows:
+       With Mode Flags Owner and Group IDs(UID, GID) for all files are inherited
+       from the pmem file pool.  File permissions will be set to read/write  for
+       the  owner,  group and others(666).  The execute bit will only be set for
+       directories.
+
+       access() and faccessat() are supported.  With libpmemfile a  process  has
+       access to all paths within a pool if it has access to the pool.
+
+       int access(const char *pathname, int mode);
+
+       RETURN VALUE
+            As defined in the access() man-page.
+       ERRORS
+            As defined in the access() man-page.
+
+       chmod(),  fchmod(), fchmod() and fchmodat() are supported.  With libpmem‐
+       file chmod() system calls act as if they always work except in  the  case
+       of defined error conditions.
+
+       int chmod(const char *pathname, mode_t mode);
+       int fchmod(int fd, mode_t mode);
+       int fchmodat(int dirfd, const char *pathname, mode_t mode, int flags);
+
+       RETURN VALUE
+            0 or -1
+       ERRORS
+            As  defined  in  the respective man-page . Errors that will never be
+            returned:
+
+            ·      EACCESS
+
+            ·      EPERM
+
+            ·      EROFS
+
+       chown(), fchown() and fchownat() are supported.  With libpmemfile chown()
+       system calls act as if it always works except in the error cases noted in
+       the man page. However, it will not change the file owner.
+
+       int chown(const char *path, uid_t owner, gid_t group);
+       int fchown(int fd, uid_t owner, gid_t group);
+       int lchown(const char * path, uid_t owner, gid_t group);
+
+       RETURN VALUE
+            0 or -1
+       ERRORS
+            As defined in the respective man-page . Errno's that will  never  be
+            returned:
+
+            ·      EACCESS
+
+            ·      EPERM
+
+            ·      EROFS
+
+   Creating child processes
+       clone()  and  fork()  are  supported.  However, libpmemfile does not have
+       multi-process support. As a result there are  restrictions  and  behavior
+       changes as specified below.
+
+       int clone(int (*fn)(void *), void *child_stack,
+                 int flags, void *arg, ...
+                 /* pid_t *ptid, struct user_desc *tls, pid_t *ctid */ );
+
+       clone() flag exceptions
+
+       ·      CLONE_IO
+                 Not supported
+
+       ·      CLONE_NEWNET
+                 Not supported.
+
+       ·      CLONE_NEWNS
+                 Not supported.
+
+       ·      CLONE_NEWUTS
+                 Not supported
+
+       ·      CLONE_NEWPID
+                 Not supported
+
+       ·      CLONE_PARENT
+                 Not supported.
+
+       ·      CLONE_PID
+                 Not supported. Obsolete.
+
+       ·      CLONE_VFORK
+                 No supported.
+
+       ·      CLONE_VM
+                 Is  Supported. However, even if a thread is created with shared
+                 virtual memory the child will not be  able  access,  create  or
+                 modify any pmem-resident files.
+
+       RETURN VALUE
+            -1  in  the  case of the unsupported flags. Otherwise, as defined in
+            the clone() man-page.
+       ERRORS
+            EINVAL Flag unsupported.
+            In the case of the unsupported flags. Otherwise, as defined  in  the
+            clone() man-page.
+
+       fork() is supported.  libpmemfile does not provide multi-process support.
+       A child created with fork() will not be allowed  to  access  any  of  the
+       existing  pmem-resident  files  nor  create new ones.  XXX what does this
+       mean for error handling?
+
+       pid_t fork(void);
+
+       RETURN VALUE
+            As defined in the fork() man-page.
+       ERRORS
+            As defined in the fork() man-page.
+
+       vfork() is not supported.
+
+       pid_t vfork(void);
+
+       RETURN VALUE
+            -1
+       ERRORS
+            ENOSYS Not supported on this platform.
+
+   I/O Event Notification
+       I/O event notification is not supported,  which  includes  the  following
+       system calls:
+
+       int epoll_ctl(int epfd, intop, intfd, struct epoll_event *event);
+       int epoll_wait(int epfd, struct epoll_event *events,
+                      int maxevents, int timeout);
+       int epoll_pwait(int epfd, struct epoll_event *events,
+                       int maxevents, int timeout,
+                       const sigset_t *sigmask);
+       int fanotify_mark(int fanotify_fd, unsigned int flags,
+                         int dirfd, const char * pathname);
+       int inotify_add_watch(int fd, const char *pathname, uint32_t mask);
+       int inotify_rm_watch(int fd, int wd);
+       int poll(struct pollfd *fds, nfds_t nfds, int timeout);
+       int ppoll(struct pollfd *fds, nfds_t nfds,
+                 const struct timespec *timeout_ts, const sigset_t *sigmask);
+       int select(int nfds, fd_set *readfds, fd_set *writefds,
+                  fd_set *exceptfds, struct timeval *timeout);
+       int pselect(int nfds, fd_set *readfds, fd_set *writefds,
+                   fd_set * exceptfds, const struct timespec * timeout,
+                   const sigset_t * sigmask);
+       void FD_CLR(int fd, fd_set *set);
+       int FD_ISSET(int fd, fd_set *set);
+       void FD_SET(int fd, fd_set *set);
+       void FD_ZERO(fd_set *set);
+
+       RETURN VALUE
+            -1
+       ERRORS
+            XXX  what do I return here? The functions have different return val‐
+            ues. And none are ENOTSUP.
+
+   Program Execution
+       Execution of a program is not supported when the  executable  file  is  a
+       pmem-resident file.
+
+       int execve(const char *filename, char * const argv[],
+                  char *const envp[]);
+
+       RETURN VALUE
+            -1 on error. On success, execve() does not return.
+       ERRORS
+            EACCESS Execute permission is denied for pmem resident files. Other‐
+            wise as defined in the execve() man-page.
+
+   Extended Attributes
+       libpmemfile does not support extended attributes.  The  following  system
+       calls are not supported.
+
+       ssize_t lgetxattr(const char *path, const char *name, void  *value,
+                         size_t size);
+       ssize_t fgetxattr(intfd, const char *name, void *value, size_t size);
+       ssize_t listxattr(const char *path, char *list, size_t size);
+       ssize_t llistxattr(const char *path, char *list, size_t size);
+       ssize_t flistxattr(int fd, char *list, size_t size);
+       int setxattr(const char *path, const char *name, const void *value,
+                    size_t size, int flags);
+       int lsetxattr(const char *path, const char *name, const void *value,
+                     size_t size, int flags);
+       int fsetxattr(int fd, const char *name, const void *value, size_t size,
+                     int flags);
+
+       RETURN VALUE
+             -1
+       ERRORS
+            ENOTSUP Not supported.
+
+   Flushing of Data and Meta-data
+       Flushing
+       All  writes  are  synchronous  with libpmemfile.  If an error occurs when
+       writing data or meta data it will be seen during the write() system call.
+
+       void sync(void);
+
+       RETURN VALUE
+            0. Always successful.
+       ERRORS
+            None.
+
+       int sync_file_range(int fd, off64_t offset, off64_t nbytes,
+                           unsigned int flags);
+       The Following Flags
+
+       ·      SYNC_FILE_RANGE_WAIT_BEFORE
+
+       ·      SYNC_FILE_RANGE_WRITE
+
+       ·      SYNC_FILE_RANGE_WAIT_AFTER
+       Are not supported. Specifying the flags as 0 is permitted.
+
+       int syncfs(int fd);
+       int fsync(int fd);
+       int fdatasync(int fd);
+
+       libpmemfile supports these system calls.
+
+       RETURN VALUE
+            0 or -1
+       ERRORS
+            As defined in the respective man-page . Errors that  will  never  be
+            returned:
+
+            ·      EIO
+
+   Special Files
+       The  system  calls  that  manage block or character special files are not
+       supported.
+
+       int mknod(const char *pathname, mode_t mode, dev_t dev);
+       int mknodat(int dirfd, const char *pathname, mode_t mode, dev_t dev);
+
+       RETURN VALUE
+            -1
+       ERRORS
+            EACCESS No write permission.
+
+   Mapping Devices into Memory
+       The mmap() system call is not supported.
+
+       void *mmap(void *addr, size_t length, int prot, int flags,
+                  int fd, off_t offset);
+
+       RETURN VALUE
+            -1
+       ERRORS
+            ENODEV No such device.
+
+
+   Create, Open and Close Files
+       The open() and creat() system calls are supported. Noted in this  section
+       are  the  flags  and  mode  bits  that are not supported or have modified
+       behavior.
+
+       int open(const char *pathname, int flags);
+       int open(const char *pathname, int flags, mode_t mode);
+       int creat(const char* pathname, mode_t mode);
+       int openat(int dirfd, const char * pathname, int flags);
+       int openat(int dirfd, const char * pathname, int flags, mode_t mode);
+       int name_to_handle_at(int dirfd, const char *pathname,
+                             struct file_handle *handle,
+                             int * mount_id, int flags);
+       int open_by_handle_at(int mount_fd, struct file_handle *handle,
+                            int flags);
+
+       Flags and Mode Bits
+
+       ·      O_ASYNC
+                 libpmemfile acts as if this flag is always set.
+
+       ·      O_CLOEXEC libpmemfile acts as if this flag is always set.
+
+       ·      O_DIRECT libpmemfile acts as if this flag is always set.
+
+              NOTE: Used generally when apps manage their own  caches.  Such  as
+              SQL. No issue in this case.
+
+       ·      O_NOATIME
+                 Supported.
+
+       ·      O_NONBLOCK or O_NDELAY
+                 libpmemfile acts as if this flag is always set.
+
+       ·      O_NOCTTY
+                 Not supported.
+
+       ·      O_PATH
+                 This  flag  will behave the same as is documented in the open()
+                 man-page. However, the use of the file descriptor returned as a
+                 result  of  this flag cannot be used to pass to another process
+                 via a UNIX domain socket.  libpmemfile does  not  provide  UNIX
+                 socket support.
+
+       ·      O_SYNC, O_DSYNC
+                 libpmemfile acts as if these flags are always set.
+
+       Mode flags
+
+       See beginning of this man-page.
+
+       RETURN VALUE
+            -1 in the case of the unsupported flags. Otherwise as defined in the
+            open() man-page.
+       ERRORS
+            EINVAL in the case of unsupported flags. Otherwise as defined in the
+            open() man-page.
+
+   File Locking
+       flock() is not supported.
+
+       int flock(int fd, int operation);
+
+       RETURN VALUE
+            -1
+       ERRORS
+            EINVAL Operation is invalid
+
+
+   File Descriptor Manipulation
+       fcntl() is supported with the following exceptions noted below.
+
+       int fcntl(int fd, int cmd, ... /* arg */ );
+
+       Duplicating File Descriptors
+
+       ·      F_DUPFD_CLOEXEC
+                 libpmemfile acts as if this flag is always set.
+
+       File Descriptor Flags
+
+       ·      F_SETFD
+                 is supported.  Currently, the only flag supported is O_CLOEXEC.
+                 libpmemfile acts as if this flag is always set.
+
+       File Status
+
+       ·      F_SETFL Is supported.
+              libpmemfile acts as if these flags are always set:
+
+                 ·      O_ASYNC O_DIRECT O_NONBLOCK
+
+       Locking
+
+       ·      F_SETLK, F_SETLKW, F_GETLK
+                 Not supported.
+
+
+       ·      F_SETOWN, F_GETOWN_EX, F_SETOWN_EX
+                 Not supported.
+
+       ·      F_GETSIG, F_SETSIG
+                 Not supported.
+
+       ·      F_SETLEASE, F_GETLEASE
+                 Not supported.
+
+       ·      F_NOTIFY
+                 Not supported.
+
+       ·      MANDATORY LOCKS
+                 Not Supported
+
+       RETURN VALUE
+            -1 for all flags not supported. Otherwise as defined in the  fcntl()
+            man-page.
+       ERRORS
+            EFAULT for flags noted as not supported. Otherwise as defined in the
+            fcntl() man-page.
+
+   Duplication of File Descriptors
+       libpmemfile supports duplication of file descriptors.  dup3() Allows  the
+       user  to  force  the  setting of the O_CLOEXEC flag.  libpmemfile assumes
+       this flag is always set. Therefore using this system call us  not  neces‐
+       sary but is supported.  int dup3(int oldfd, int newfd, int flags);
+
+       RETURN VALUE
+            As specified in the dup3() man-page.
+       ERRORS
+            As specified in the dup3()
+             man-page.
+
+   File I/O
+       All File I/O operations are supported except as specified.
+
+       readahead()  is supported. However libpmemfile does not use page caching,
+       and all files are pmem-resident so disk I/O is never an issue.
+
+       ssize_t readahead(int fd, off64_t offset, size_t count);
+
+       RETURN VALUE
+            As defined in the readahead() man-page
+       ERRORS
+            As defined in the readahead() man-page.
+
+       sendfile() is supported except in the case where one of the file descrip‐
+       tors is not a pmem-resident file.
+
+       ssize_t sendfile(int out_fd, int in_fd, off_t *offset, size_t count);
+
+       RETURN VALUE
+            -1  in  the  case where one of the file descriptors resides in a non
+            pmem-resident file system. Otherwise as defined  in  the  sendfile()
+            man-page.
+       ERRORS
+            EBADF Bad File Descriptor
+            in the case of one of the files in a non pmem-resident file system.
+            Otherwise as defined in the sendfile() man-page.
+
+       splice()  is  supported if both the out_fd and in_fd file descriptors are
+       pmem-resident files.
+
+       ssize_t splice(int fd_ian, loff_t * off_in, int fd_out,
+                      loff_t *off_out, size_t len, unsigned int flags);
+       Splice Flags
+
+       ·      SPLICE_F_MOVE
+                 Not Supported
+
+       ·      SPLICE_F_NONBLOCK SLICE_F_MORE
+                 libpmemfile acts as if these flags are always set.
+
+       RETURN VALUE
+            -1 in the case that one of the file descriptors is not a  pmem-resi‐
+            dent file.  Otherwise as defined in the splice() man-page.
+       ERRORS
+            EINVAL  Target  file system does not support this operation.  Other‐
+            wise as defined in the splice() man-page.
+
+       tee() is not supported.  XXX look at what breaks if this isn't supported.
+       What applications we are going to test?
+
+       size_t tee(int fd_in, int fd_out, size_t len, unsigned int flags);
+
+       RETURN VALUE
+            -1
+       ERRORS
+            EINVAL Invalid operation.
+
+       rename()  and  all  related system calls are supported except in the case
+       where one of the paths is not located in the same pmem file system.
+
+       int rename(const char *oldpath, const char *newpath);
+       int renameat(int olddirfd, const char *oldpath,
+                    int newdirfd, const char *newpath);
+       int renameat2(int olddirfd, const char *oldpath,
+                    int newdirfd, const char *newpath);
+
+       RETURN VALUE
+            -1 For the error case specified above. Otherwise as defined  in  the
+            respective man-page.
+       ERRORS
+            As  defined  in  the respective man-page . Errors that will never be
+            returned:
+
+            ·      EROFS
+
+            ·      EPERM or EACCESS in the case both file descriptors are  valid
+                   and are pmem-resident files.
+
+       EACCESS  when  both  files  are  not  pmem-resident files.   Otherwise as
+       defined in the respective man-page.
+
+
+   Miscellaneous
+       libpmemfile does not support the following:
+
+       int chroot(const char *path);
+       int ioctl(int d, int request,...);
+       int pivot_root(const char *new_root, const char* put_old);
+       int swapon(const char *path, int swapflags);
+       int swapoff(const char *path);
+
+       RETURN VALUE
+            -1
+       ERRORS
+            chroot()
+                 EPERM Insufficient privilege.
+            ioctl()
+                 EFAULT Requesting an inaccessible memory area.
+            pivot_root()
+                 EPERM Insufficient privilege.
+            swapon()
+            swapoff()
+                 EINVAL Invalid Path
+
+   Sockets
+       libpmemfile does not support socket operations.
+
+       int getsockname(int sockfd, struct sockaddr * addr, socklen_t * addrlen);
+       int getsockopt(int sockfd, int level, int optname,
+                      void * optval, socklen_t * optlen);
+       int setsockopt(int sockfd, int level, int optname,
+                      const void * optval, socklen_toptlen);
+       RETURN VALUE
+            -1 In all cases.
+       ERRORS
+            EFAULT Not supported.
+
+   Asynchronous I/O
+       Support for asynchronous I/O is TBD.
+
+
+
+NVM Library                  libpmemfile version 0.1              libpmemfile(3)

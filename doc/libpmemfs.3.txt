@@ -1,0 +1,101 @@
+libpmemfs(3)                Library Functions Manual                libpmemfs(3)
+
+
+
+NAME
+       libpmemfs - File System Direct API
+
+
+DESCRIPTION
+       libpmemfs  provides  direct  access to persistent memory (pmem) file sys‐
+       tems.  This library is intended for applications that want to store files
+       on  pmem  without kernel overhead (system call interface, file system and
+       block layer) and application source code modifications.
+
+
+EXCEPTIONS TO SUPPORTED FILE SYSTEM OPERATIONS
+       This section outlines the exceptions to the specified file operations.
+
+   File System Operations
+       int mount(const char *source, const char *target,
+                 const char *filesystemtype, unsigned long mountflags,
+                 const void *data);
+       int umount(const char *target);
+       int unmount2(const char *target, int flags)
+
+       libpmemfs is a transactional memory pool whose  objects  represent  files
+       and directories.  As such libpmemfs does not support standard file system
+       operations.
+
+       A pool must be created first and it must be created with a specific  path
+       with the following syntax: <PATH::POOLNAME> This will be exported via the
+       following environment variable: PMEM_FS.  A libpmemfs  file  system  does
+       not  show up as a mount. It is a memory mapped file which is accessed via
+       the PMEM_FS path.
+
+   mkfs.pmem(3).
+       This is used to create the transactional object store pool.
+
+       mkfs.pmem [options] [fs-flags] [fs-options] [path] [size]
+
+   OPTIONS
+       -V --verbose Produce  verbose output
+
+       -h --help
+
+       fs-flags
+       libpmemfs does not support mount however, it does support  the  following
+       flags that provide specific file system attributes:
+
+       ·      MS_BIND
+                 Not supported.
+
+       ·      MS_DIRSYNC
+                 libpmemfs acts as if this flag is always on.
+
+       ·      MS_MANDLOCK
+                 Not supported.
+
+       ·      MS_MOVE
+                 Not supported.
+
+       ·      MS_NOATIME
+                 Supported.
+
+       ·      MS_NODEV
+                 libpmemfs acts as if this flag is always on.
+
+       ·      MS_NODIRATIME
+                 Supported.
+
+       ·      MS_NOEXEC
+                 libpmemfs acts as if this flag is always on.
+
+       ·      MS_NOSUID
+                 libpmemfs acts as if this flag is always on.
+
+       ·      MS_RDONLY
+                 libpmemfs  ensures that when a pmem file system pool is created
+                 it always has read and write permissions.
+
+       ·      MS_RELATIME
+                 Not supported.
+
+       ·      MS_REMOUNT
+                 A libpmemfs file system is not mounted as a standard file  sys‐
+                 tem. Once created it's the pmem file system pool can be opened,
+                 closed and deleted.  Not supported.
+
+       ·      MS_SILENT
+                 Not supported. All errors are logged.
+
+       ·      MS_STRICTATIME
+                 libpmemfs acts as if this flag is always true when the MS_ATIME
+                 is set.
+
+       ·      MS_SYNCHRONOUS
+                 libpmemfs acts as if this flag is always on.
+
+
+
+NVM Library                   libpmemfs version 0.1                 libpmemfs(3)

@@ -206,6 +206,18 @@ Depends: libpmemblk (=\${binary:Version}), \${shlibs:Depends}, \${misc:Depends}
 Description: Development files for libpmemblk
  Development files for libpmemblk library.
 
+Package: libpmemfile
+Architecture: any
+Depends: \${misc:Depends}
+Description: NVML library for Persistent Memory support - file API
+ NVML library for Persistent Memory support - file system memory pool.
+
+Package: libpmemfs
+Architecture: any
+Depends: \${misc:Depends}
+Description: NVML library for Persistent Memory support - file system API
+ NVML library for Persistent Memory support - file system memory pool.
+
 Package: libpmemlog
 Architecture: any
 Depends: libpmem (=\${binary:Version}), \${shlibs:Depends}, \${misc:Depends}
@@ -449,6 +461,26 @@ usr/lib/libpmemobj.so
 usr/lib/pkgconfig/libpmemobj.pc
 usr/include/libpmemobj.h
 usr/share/man/man3/libpmemobj.3.gz
+EOF
+
+cat << EOF > debian/libpmemfile.lintian-overrides
+$ITP_BUG_EXCUSE
+new-package-should-close-itp-bug
+libpmemfile: package-name-doesnt-match-sonames
+EOF
+
+cat << EOF > debian/libpmemfile.install
+usr/share/man/man3/libpmemfile.3.gz
+EOF
+
+cat << EOF > debian/libpmemfs.lintian-overrides
+$ITP_BUG_EXCUSE
+new-package-should-close-itp-bug
+libpmemfs: package-name-doesnt-match-sonames
+EOF
+
+cat << EOF > debian/libpmemfs.install
+usr/share/man/man3/libpmemfs.3.gz
 EOF
 
 cat << EOF > debian/libpmemobj-dev.triggers
