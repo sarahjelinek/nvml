@@ -34,6 +34,10 @@
  * set.c -- pool set utilities
  */
 
+#ifndef	_GNU_SOURCE
+#define	_GNU_SOURCE
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,7 +50,6 @@
 #include <errno.h>
 #include <stddef.h>
 #include <time.h>
-#include <uuid/uuid.h>
 #include <ctype.h>
 #include <linux/limits.h>
 
@@ -1186,6 +1189,109 @@ util_replica_close(struct pool_set *set, unsigned repidx)
 	return 0;
 }
 
+/*
+ * util_uuid_to_string -- generate a string form of the uuid
+ *
+ */
+int
+util_uuid_to_string(struct uuid *u, char **buf)
+{
+	int len; /* size that is returned from asprintf call */
+	if (buf == NULL) {
+		LOG(2, "invalid buffer for uuid string");
+		return -1;
+	}
+
+	if (u == NULL) {
+		LOG(2, "invalid buffer for uuid string");
+		return -1;
+	}
+
+	len = asprintf(buf, "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+		u->time_low, u->time_mid, u->time_hi_and_ver,
+		u->clock_seq_hi, u->clock_seq_low, u->node[0],
+		u->node[1], u->node[2], u->node[3], u->node[4], u->node[5]);
+
+	if (len != POOL_HDR_UUID_LEN) {
+		LOG(2, "!asprintf(uuid)");
+		return -1;
+	}
+
+	if (*buf == NULL) {
+		LOG(2, "could not create uuid string");
+		return -1;
+	}
+
+	return 0;
+}
+
+/*
+ * util_uuid_from_string -- generate a binary form of the uuid
+ *
+ * uuid string read from /proc/sys/kernel/random/uuid. UUID string
+ * format example:
+ * f81d4fae-7dec-11d0-a765-00a0c91e6bf6
+ */
+int
+util_uuid_from_string(const char uuid[POOL_HDR_UUID_STR_LEN],
+	struct uuid *ud)
+{
+	if (strlen((const char *)uuid) != 36) {
+		LOG(2, "invalid uuid string");
+		return -1;
+	}
+
+	int n = sscanf(uuid,
+	    "%8x-%4hx-%4hx-%2hhx%2hhx-%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx",
+	    &ud->time_low, &ud->time_mid, &ud->time_hi_and_ver,
+	    &ud->clock_seq_hi, &ud->clock_seq_low, &ud->node[0],
+	    &ud->node[1], &ud->node[2], &ud->node[3], &ud->node[4],
+			&ud->node[5]);
+
+	if (n != 11) {
+		LOG(2, "!sscanf(uuid)");
+		return -1;
+	}
+
+	return 0;
+}
+
+/*
+ * util_uuid_generate -- generate a uuid
+ *
+ * This function reads the uuid string from  /proc/sys/kernel/random/uuid
+ * It converts this string into the binary uuid format as specified in
+ * https://www.ietf.org/rfc/rfc4122.txt
+ */
+int
+util_uuid_generate(uuid_t uuid)
+{
+	unsigned char uu[POOL_HDR_UUID_STR_LEN];
+
+	int fd = open(POOL_HDR_UUID_GEN_FILE, O_RDONLY);
+	if (fd < 0) {
+		/* Fatal error */
+		LOG(2, "!open(uuid)");
+		goto err;
+	}
+	ssize_t num = read(fd, uu, POOL_HDR_UUID_STR_LEN);
+	if (num < POOL_HDR_UUID_STR_LEN) {
+		/* Fatal error */
+		LOG(2, "!read(uuid)");
+		close(fd);
+		goto err;
+	}
+	close(fd);
+
+	uu[POOL_HDR_UUID_STR_LEN - 1] = '\0';
+	util_uuid_from_string((const char *)uu, (struct uuid *)uuid);
+	uuid = (unsigned char *)uuid;
+	return 0;
+
+err:
+	return -1;
+
+}
 
 /*
  * util_pool_create -- create a new memory pool (set or a single file)
@@ -1220,13 +1326,24 @@ util_pool_create(struct pool_set **setp, const char *path, size_t poolsize,
 	set->poolsize = SIZE_MAX;
 
 	/* generate pool set UUID */
-	uuid_generate(set->uuid);
+	ret = util_uuid_generate(set->uuid);
+	if (ret < 0) {
+		LOG(2, "cannot generate pool set UUID");
+		util_poolset_close(*setp, 1);
+		return -1;
+	}
 
 	/* generate UUID's for all the parts */
 	for (unsigned r = 0; r < set->nreplicas; r++) {
 		struct pool_replica *rep = set->replica[r];
-		for (unsigned i = 0; i < rep->nparts; i++)
-			uuid_generate(rep->part[i].uuid);
+		for (unsigned i = 0; i < rep->nparts; i++) {
+			ret = util_uuid_generate(rep->part[i].uuid);
+			if (ret < 0) {
+				LOG(2, "cannot generate pool set UUID");
+				util_poolset_close(*setp, 1);
+				return -1;
+			}
+		}
 	}
 
 	for (unsigned r = 0; r < set->nreplicas; r++) {

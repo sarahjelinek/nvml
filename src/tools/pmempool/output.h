@@ -34,7 +34,6 @@
  * output.h -- declarations of output printing related functions
  */
 
-#include <uuid/uuid.h>
 #include <time.h>
 #include <stdint.h>
 #include <stdio.h>

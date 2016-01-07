@@ -40,4 +40,4 @@ SOURCE = libpmemblk.c blk.c btt.c $(COMMON)/util.c $(COMMON)/set.c\
 
 include ../Makefile.inc
 
-LIBS += -luuid -pthread -lpmem
+LIBS += -pthread -lpmem

@@ -335,10 +335,13 @@ out_get_size_str(uint64_t size, int human)
 const char *
 out_get_uuid_str(uuid_t uuid)
 {
-	static char uuid_str[UUID_STR_MAX] = {0, };
+	static const char uuid_str[UUID_STR_MAX];
 
-	uuid_unparse(uuid, uuid_str);
-
+	int ret = util_uuid_to_string((struct uuid *)&uuid, (char **)&uuid_str);
+	if (ret != 0) {
+		outv(2, "failed to covert uuid to string");
+		return NULL;
+	}
 	return uuid_str;
 }
 

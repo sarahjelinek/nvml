@@ -129,7 +129,6 @@
 #include <stdint.h>
 #include <pthread.h>
 #include <endian.h>
-#include <uuid/uuid.h>
 
 #include "out.h"
 #include "util.h"
@@ -884,7 +883,7 @@ write_layout(struct btt *bttp, unsigned lane, int write)
 	 * If a new layout is being written, generate the BTT's UUID.
 	 */
 	if (write)
-		uuid_generate(bttp->uuid);
+		util_uuid_generate(bttp->uuid);
 
 	/*
 	 * The number of arenas is the number of full arena of
