@@ -129,6 +129,7 @@ pmemobj_direct(PMEMoid oid)
  * PMEMOBJ_COW environment variable.
  */
 static int Open_cow;
+extern unsigned pmemobj_skip_flush;
 
 /*
  * obj_init -- initialization of obj
@@ -147,6 +148,9 @@ obj_init(void)
 	if (env)
 		Open_cow = atoi(env);
 #endif
+	char *tmp = getenv("PMEMOBJ_SKIP_FLUSH");
+	if (tmp)
+		pmemobj_skip_flush = (unsigned)atoi(tmp);
 
 #ifdef _WIN32
 	/* XXX - temporary implementation (see above) */

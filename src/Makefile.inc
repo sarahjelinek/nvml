@@ -40,7 +40,7 @@ INCLUDE = $(TOP)/src/include
 COMMON = $(TOP)/src/common
 vpath %.c $(COMMON)
 
-INCS += -I../include -I../common/
+INCS += -I$(TOP)/src/include -I$(TOP)/src/common/
 
 CFLAGS += -std=gnu99
 CFLAGS += -Wall
@@ -107,13 +107,9 @@ LIBS_DESTDIR = $(DESTDIR)$(libdir)$(LIB_SUBDIR)
 
 DIRNAME = $(shell basename $(CURDIR))
 
-ifeq ($(OBJDIR),$(abspath $(OBJDIR)))
-objdir = $(OBJDIR)/$(DIRNAME)
-else
-objdir = ../$(OBJDIR)/$(DIRNAME)
-endif
+objdir = $(TOP)/src/$(OBJDIR)/$(DIRNAME)
 
-LIB_OUTDIR = $(objdir)/..
+LIB_OUTDIR = $(TOP)/src/$(OBJDIR)
 
 LDFLAGS += -L$(LIB_OUTDIR)
 

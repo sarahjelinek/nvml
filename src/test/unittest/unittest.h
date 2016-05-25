@@ -114,7 +114,7 @@ extern "C" {
 #include <libpmemlog.h>
 #include <libpmemobj.h>
 #include <libvmem.h>
-
+#include <libpmemfile-core.h>
 
 /*
  * unit test support...

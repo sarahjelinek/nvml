@@ -604,6 +604,8 @@ tx_abort_set(PMEMobjpool *pop, struct lane_tx_layout *layout, int recovery)
 			TX_CLR_FLAG_VG_CLEAN);
 }
 
+unsigned pmemobj_skip_flush = 5;
+
 /*
  * tx_pre_commit_alloc -- (internal) do pre-commit operations for
  * allocated objects
@@ -621,8 +623,12 @@ tx_pre_commit_alloc(PMEMobjpool *pop, struct lane_tx_layout *layout)
 
 		size_t size = pmalloc_usable_size(pop, iter.off);
 
-		/* flush the whole allocated area and oob header */
-		pop->flush(pop, oobh, size);
+		if (pmemobj_skip_flush &&
+				pmemobj_type_num(iter) == pmemobj_skip_flush)
+			pop->flush(pop, oobh, sizeof(*oobh));
+		else
+			/* flush the whole allocated area and oob header */
+			pop->flush(pop, oobh, size);
 	}
 }
 

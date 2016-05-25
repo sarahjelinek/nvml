@@ -36,7 +36,8 @@ TOP := $(dir $(lastword $(MAKEFILE_LIST)))..
 include $(TOP)/src/common.inc
 
 TARGETS = libpmem libvmem libpmemblk libpmemlog libpmemobj libvmmalloc tools
-ALL_TARGETS = $(TARGETS) librpmem examples benchmarks
+ALL_TARGETS = $(TARGETS) librpmem examples benchmarks libpmemfile
+
 CLEAN_NO_JE_TARGETS = $(ALL_TARGETS) test
 CLEAN_TARGETS = $(CLEAN_NO_JE_TARGETS) jemalloc
 CLOBBER_NO_JE_TARGETS = $(ALL_TARGETS) test
@@ -48,6 +49,9 @@ HEADERS_DESTDIR = $(DESTDIR)$(includedir)
 HEADERS_INSTALL = include/libpmem.h include/libvmem.h\
 		include/libpmemobj.h include/libpmemblk.h\
 		include/libpmemlog.h include/libvmmalloc.h
+
+# XXX
+#HEADERS_INSTALL += include/libpmemfile-core.h
 
 CPP_HEADERS_DESTDIR = $(DESTDIR)$(includedir)/libpmemobj
 
@@ -88,6 +92,7 @@ custom_build = $(DEBUG)$(OBJDIR)
 libvmmalloc libvmem: jemalloc
 tools: libpmem libpmemblk libpmemlog libpmemobj
 libpmemblk libpmemlog libpmemobj: libpmem
+libpmemfile: libpmemobj
 
 pkg-config:
 	@$(MAKE_PKG_CONFIG) "$(prefix)" "$(libdir)" "$(SRCVERSION)"

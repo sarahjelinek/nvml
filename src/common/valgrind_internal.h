@@ -64,11 +64,41 @@ extern unsigned _On_valgrind;
 		ANNOTATE_HAPPENS_AFTER((obj));\
 } while (0)
 
+#define	VALGRIND_MUTEX_LOCK_PRE(mutex, istrylock) do {\
+	if (On_valgrind) \
+		VALGRIND_HG_MUTEX_LOCK_PRE(mutex, istrylock);\
+} while (0)
+
+#define	VALGRIND_MUTEX_LOCK_POST(mutex) do {\
+	if (On_valgrind) \
+		VALGRIND_HG_MUTEX_LOCK_POST(mutex);\
+} while (0)
+
+#define	VALGRIND_MUTEX_UNLOCK_PRE(mutex) do {\
+	if (On_valgrind) \
+		VALGRIND_HG_MUTEX_UNLOCK_PRE(mutex);\
+} while (0)
+
+#define	VALGRIND_MUTEX_UNLOCK_POST(mutex) do {\
+	if (On_valgrind) \
+		VALGRIND_HG_MUTEX_UNLOCK_POST(mutex);\
+} while (0)
+
 #else
 
 #define VALGRIND_ANNOTATE_HAPPENS_BEFORE(obj) do { (void)(obj); } while (0)
 
 #define VALGRIND_ANNOTATE_HAPPENS_AFTER(obj) do { (void)(obj); } while (0)
+
+#define	VALGRIND_MUTEX_LOCK_PRE(mutex, istrylock) do {\
+	(void) mutex; (void) istrylock;\
+} while (0)
+
+#define	VALGRIND_MUTEX_LOCK_POST(mutex) do { (void)mutex; } while (0)
+
+#define	VALGRIND_MUTEX_UNLOCK_PRE(mutex) do { (void)mutex; } while (0)
+
+#define	VALGRIND_MUTEX_UNLOCK_POST(mutex) do { (void)mutex; } while (0)
 
 #endif
 

@@ -50,6 +50,13 @@ BLK_TESTS = \
 	blk_recovery\
 	blk_rw\
 	blk_rw_mt
+
+FILE_TESTS = \
+	file_core_basic\
+	file_core_crash\
+	file_core_mt\
+	file_core_rw
+
 LOG_TESTS = \
 	log_basic\
 	log_pool\
@@ -247,6 +254,7 @@ REMOTE_TESTS = \
 TESTS = \
 	$(OBJ_TESTS)\
 	$(BLK_TESTS)\
+	$(FILE_TESTS)\
 	$(LOG_TESTS)\
 	$(OTHER_TESTS)\
 	$(PMEM_TESTS)\
@@ -323,6 +331,10 @@ pcheck: $(TESTS_BUILD)
 
 pcheck_blk: TARGET = pcheck
 pcheck_blk: $(BLK_TESTS)
+	@echo "No failures."
+
+pcheck_file: TARGET = pcheck
+pcheck_file: $(FILE_TESTS)
 	@echo "No failures."
 
 pcheck_log: TARGET = pcheck
