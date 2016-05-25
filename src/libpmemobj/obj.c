@@ -162,6 +162,7 @@ obj_init(void)
 		FATAL("!ctree_new");
 
 	lane_info_boot();
+	obj_tx_callbacks_init();
 }
 
 /*
@@ -173,6 +174,7 @@ void
 obj_fini(void)
 {
 	LOG(3, NULL);
+	obj_tx_callbacks_fini();
 	cuckoo_delete(pools_ht);
 	ctree_delete(pools_tree);
 

@@ -60,6 +60,9 @@ static __thread struct {
 	enum pobj_tx_stage stage;
 	int last_errnum;
 	struct lane_section *section;
+
+	pmemobj_tx_callback stage_callback;
+	void *stage_callback_arg;
 } tx;
 
 struct tx_lock_data {
@@ -1223,6 +1226,16 @@ pmemobj_tx_end()
 		release_and_free_tx_locks(lane);
 		lane_release(lane->pop);
 		tx.section = NULL;
+
+		if (tx.stage_callback) {
+			pmemobj_tx_callback cb = tx.stage_callback;
+			void *arg = tx.stage_callback_arg;
+
+			tx.stage_callback = NULL;
+			tx.stage_callback_arg = NULL;
+
+			cb(TX_STAGE_NONE, arg);
+		}
 	} else {
 		/* resume the next transaction */
 		tx.stage = TX_STAGE_WORK;
@@ -1246,12 +1259,21 @@ pmemobj_tx_process()
 	ASSERT_IN_TX();
 	ASSERTne(tx.section, NULL);
 
+	if (tx.stage_callback) {
+		struct lane_tx_runtime *lane = tx.section->runtime;
+		struct tx_data *txd = SLIST_FIRST(&lane->tx_entries);
+
+		/* is this the outermost transaction? */
+		if (SLIST_NEXT(txd, tx_entry) == NULL)
+			tx.stage_callback(tx.stage, tx.stage_callback_arg);
+	}
+
 	switch (tx.stage) {
 	case TX_STAGE_NONE:
 		break;
 	case TX_STAGE_WORK:
 		pmemobj_tx_commit();
-		return;
+		break;
 	case TX_STAGE_ONABORT:
 	case TX_STAGE_ONCOMMIT:
 		tx.stage = TX_STAGE_FINALLY;
@@ -1262,6 +1284,28 @@ pmemobj_tx_process()
 	case MAX_TX_STAGE:
 		ASSERT(0);
 	}
+}
+
+/*
+ * pmemobj_tx_stage_callback_set -- sets callback to be executed after each
+ * stage transition
+ */
+void
+pmemobj_tx_stage_callback_set(pmemobj_tx_callback func, void *arg)
+{
+	LOG(3, NULL);
+
+	ASSERT_IN_TX();
+
+	if (func != NULL && tx.stage_callback != NULL &&
+		(func != tx.stage_callback || arg != tx.stage_callback_arg))
+		FATAL("transaction callback is already set, "
+			"old %p new %p old_arg %p new_arg %p",
+			tx.stage_callback, func, tx.stage_callback_arg, arg);
+
+	tx.stage_callback = func;
+	tx.stage_callback_arg = arg;
+	obj_basic_tx_callback = func == pmemobj_tx_stage_callback_basic;
 }
 
 /*

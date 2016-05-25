@@ -270,6 +270,10 @@ libpmemobj \- persistent memory transactional object store
 .BI "PMEMoid pmemobj_tx_zrealloc(PMEMoid " oid ", size_t " size ", uint64_t " type_num );
 .BI "PMEMoid pmemobj_tx_strdup(const char *" s ", uint64_t " type_num );
 .BI "int pmemobj_tx_free(PMEMoid " oid );
+.BI "void pmemobj_tx_stage_callback_set(pmemobj_tx_callback " func ", void *" ctx );
+.BI "void pmemobj_tx_stage_callback_basic(enum pobj_tx_stage " stage ", void *" ctx );
+.BI "int pmemobj_tx_stage_callback_push_back(enum pobj_tx_stage " stage ", pmemobj_tx_callback_basic " func ", void *" arg );
+.BI "int pmemobj_tx_stage_callback_push_front(enum pobj_tx_stage " stage ", pmemobj_tx_callback_basic " func ", void *" arg );
 .sp
 .BI "TX_BEGIN_LOCK(PMEMobjpool *" pop ", " ... )
 .BI "TX_BEGIN(PMEMobjpool *" pop )
@@ -2925,6 +2929,81 @@ and an error number is returned.
 This function must be called during
 .IR TX_STAGE_WORK .
 .PP
+
+.BI "void pmemobj_tx_stage_callback_set(pmemobj_tx_callback " func ", void *" ctx );
+.IP
+The
+.BR pmemobj_tx_stage_callback_set ()
+function registers function
+.IR func
+to be called with argument
+.IR ctx,
+during each transaction stage, just before transition to the next stage. This
+function must be called in transaction. The passed function will be used only
+in the current transaction and in case of nested transaction it will be called
+in the outermost one. It's illegal to call this function twice in the same
+transaction with different non-NULL arguments.
+If it's desirable to have multiple callbacks per transaction and/or stage,
+libpmemobj provides such implementation. See pmemobj_tx_stage_callback_basic
+for details.
+Note: Registered function will also be called after transaction end. In this
+case stage parameter will be equal to
+.IR TX_STAGE_NONE .
+.BR
+.PP
+
+.BI "void pmemobj_tx_stage_callback_basic(enum pobj_tx_stage " stage ", void *" ctx );
+.IP
+The
+.BR pmemobj_tx_stage_callback_basic ()
+function provides basic implementation of transaction callback that calls
+functions registered by pmemobj_tx_stage_callback_push_back and
+pmemobj_tx_stage_callback_push_front.
+.BR
+.PP
+
+.BI "int pmemobj_tx_stage_callback_push_back(enum pobj_tx_stage " stage ", pmemobj_tx_callback_basic " func ", void *" arg );
+.IP
+The
+.BR pmemobj_tx_stage_callback_push_back ()
+function registers function
+.IR func
+to be called at the end of transaction
+.IR stage
+with two arguments:
+.IR ctx
+(from pmemobj_tx_stage_callback_set) and
+.IR arg .
+The function is registered at the end of per-stage queue.
+.BR
+.PP
+
+.BI "int pmemobj_tx_stage_callback_push_front(enum pobj_tx_stage " stage ", pmemobj_tx_callback_basic " func ", void *" arg );
+.IP
+The
+.BR pmemobj_tx_stage_callback_push_front ()
+function registers function
+.IR func
+to be called at the end of transaction
+.IR stage
+with two arguments:
+.IR ctx
+(from pmemobj_tx_stage_callback_set) and
+.IR arg .
+The function is registered at the beginning of per-stage queue.
+.BR
+.PP
+
+These 4 functions can be used to:
+.RS 7
+.IP - 2
+free runtime (volatile) data associated with pmem object during commit (if transaction freed pmem object) or abort (if transaction allocated pmem object) stages
+.IP -
+register runtime (volatile) data associated with pmem object during commit (if transaction allocated pmem object) or abort (if transaction freed pmem object and unregistered runtime object) stages
+.RE
+.BR
+.PP
+
 In addition to the above API, the
 .B libpmemobj
 offers a more intuitive method of building transactions using a set of macros

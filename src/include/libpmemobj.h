@@ -1100,6 +1100,23 @@ TX_MEMSET(void *dest, int c, size_t num)
 	return memset(dest, c, num);
 }
 
+typedef void (*pmemobj_tx_callback)(enum pobj_tx_stage stage, void *);
+typedef void (*pmemobj_tx_callback_basic)(void *, void *);
+
+void pmemobj_tx_stage_callback_set(pmemobj_tx_callback func, void *arg);
+
+void pmemobj_tx_stage_callback_basic(enum pobj_tx_stage stage, void *arg);
+
+#define	TX_SET_BASIC_CALLBACK(arg)\
+	pmemobj_tx_stage_callback_set(pmemobj_tx_stage_callback_basic, arg)
+
+int pmemobj_tx_stage_callback_push_back(enum pobj_tx_stage stage,
+		pmemobj_tx_callback_basic func,
+		void *arg);
+int pmemobj_tx_stage_callback_push_front(enum pobj_tx_stage stage,
+		pmemobj_tx_callback_basic func,
+		void *arg);
+
 #ifdef __cplusplus
 }
 #endif

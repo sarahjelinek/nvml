@@ -275,3 +275,8 @@ OBJ_OID_IS_VALID(PMEMobjpool *pop, PMEMoid oid)
 
 void obj_init(void);
 void obj_fini(void);
+
+void obj_tx_callbacks_init(void);
+void obj_tx_callbacks_fini(void);
+
+extern __thread int obj_basic_tx_callback;
