@@ -1,0 +1,909 @@
+.\"
+.\" Copyright 2016, Intel Corporation
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\"
+.\"     * Redistributions of source code must retain the above copyright
+.\"       notice, this list of conditions and the following disclaimer.
+.\"
+.\"     * Redistributions in binary form must reproduce the above copyright
+.\"       notice, this list of conditions and the following disclaimer in
+.\"       the documentation and/or other materials provided with the
+.\"       distribution.
+.\"
+.\"     * Neither the name of the copyright holder nor the names of its
+.\"       contributors may be used to endorse or promote products derived
+.\"       from this software without specific prior written permission.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+.\" "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+.\" LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+.\" A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+.\" OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+.\" SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+.\" LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+.\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+.\" OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.\"
+.\" libpmemfile.3 -- man-page for libpmemfile
+.\"
+.\" Format this man-page with:
+.\"	man -l libpmemfile.3
+.\" or
+.\"	groff -man -Tascii libpmemfile.3
+.\"
+.TH libpmemfile 3 "libpmemfile version 0.1" "NVM Library"
+.SH NAME
+libpmemfile \- File Direct API
+.br
+.sp
+.SH DESCRIPTION
+.PP
+.B libpmemfile
+provides direct access to
+.I persistent memory
+(pmem)
+resident files via standard file interfaces.
+This library is intended for applications that want to store files on
+pmem without kernel overhead (system call interface, file system and block layer)
+and application source code modifications.
+.sp
+.SH EXCEPTIONS TO SUPPORTED FILE OPERATIONS
+This section outlines the exceptions to the specified file operations.
+.br
+.sp
+.SS File Attributes
+Owner, group and permission bits are handled as follows:
+.br
+With
+.b libpmemfile
+.B Mode Flags
+Owner and Group IDs(UID, GID) for all files are inherited from the pmem file
+pool.
+File permissions will be set to read/write for the owner, group and others(666).
+The execute bit will only be set for directories.
+.sp
+.B access() and faccessat()
+are supported.
+With
+.B libpmemfile
+a process has access to all paths within a pool if it has access to the pool.
+.sp
+.BI "int access(const char *" pathname ", int " mode );
+.sp
+.BI "RETURN VALUE"
+.RS 5
+As defined in the
+.B access()
+man-page.
+.RE
+.BI ERRORS
+.RS 5
+As defined in the
+.B access()
+man-page.
+.RE
+.sp
+.B chmod(), fchmod(), fchmod() and fchmodat()
+are supported.  With
+.B libpmemfile chmod()
+system calls act as if they always work except in the case of defined error conditions.
+.sp
+.BI "int chmod(const char *" pathname ", mode_t " mode );
+.br
+.BI "int fchmod(int " fd ", mode_t " mode) ;
+.br
+.BI "int fchmodat(int " dirfd ", const char *" pathname ", mode_t " mode ", int " flags );
+.sp
+.BI "RETURN VALUE"
+.RS 5
+0 or -1
+.RE
+.BI ERRORS
+.RS 5
+As defined in the respective man-page . Errors that will never be returned:
+.IP \[bu]
+EACCESS
+.IP \[bu]
+EPERM
+.IP \[bu]
+EROFS
+.RE
+.sp
+.B chown(), fchown() and fchownat()
+are supported.
+With
+.B libpmemfile chown()
+system calls act as if it always works except in the error cases noted
+in the man page. However, it will not change the file owner.
+.sp
+.BI "int chown(const char " *path ", uid_t " owner ", gid_t " group );
+.br
+.BI "int fchown(int " fd ", uid_t " owner ", gid_t " group );
+.br
+.BI "int lchown(const char * "path ", uid_t " owner ", gid_t " group );
+.br
+.sp
+.BI "RETURN VALUE"
+.RS 5
+0 or -1
+.RE
+.BI ERRORS
+.RS 5
+As defined in the respective man-page . Errno's that will never be returned:
+.IP \[bu]
+EACCESS
+.IP \[bu]
+EPERM
+.IP \[bu]
+EROFS
+.RE
+.SS Creating child processes
+.br
+.BI "clone() and fork()"
+are supported. However,
+.B libpmemfile
+does not have multi-process support. As a result there are restrictions
+and behavior changes as specified below.
+.sp
+.BI "int clone(int (*" "fn" ")(void *), void *" child_stack ,
+.RS 10
+.BI "int " flags ", void *" "arg" ", ... "
+.RE
+.RS 10
+.BI "/* pid_t *" ptid ", struct user_desc *" tls \
+", pid_t *" ctid " */ );"
+.RE
+.sp
+.RS 0
+.B "clone() flag exceptions"
+.RE
+.IP \[bu]
+.BI CLONE_IO
+.RS 10
+Not supported
+.RE
+.IP \[bu]
+.BI CLONE_NEWNET
+.RS 10
+Not supported.
+.RE
+.IP \[bu]
+.BI CLONE_NEWNS
+.RS 10
+Not supported.
+.RE
+.IP \[bu]
+.BI CLONE_NEWUTS
+.RS 10
+Not supported
+.RE
+.IP \[bu]
+.BI CLONE_NEWPID
+.RS 10
+Not supported
+.RE
+.IP \[bu]
+.BI CLONE_PARENT
+.RS 10
+Not supported.
+.RE
+.IP \[bu]
+.BI CLONE_PID
+.RS 10
+Not supported. Obsolete.
+.RE
+.IP \[bu]
+.BI CLONE_VFORK
+.RS 10
+No supported.
+.RE
+.IP \[bu]
+.BI CLONE_VM
+.RS 10
+Is Supported. However, even if a thread is created with shared virtual memory
+the child will not be able access, create or modify any pmem-resident files.
+.RE
+.sp
+.BI "RETURN VALUE"
+.RS 5
+-1 in the case of the unsupported flags. Otherwise, as defined in the
+.B clone()
+man-page.
+.RE
+.BI ERRORS
+.RS 5
+EINVAL Flag unsupported.
+.br
+In the case of the unsupported flags. Otherwise, as defined in the
+.B clone()
+man-page.
+.RE
+.RS 0
+.RE
+.sp
+.B fork()
+is supported.
+.B libpmemfile
+does not provide multi-process support. A child created with
+.B fork()
+will not be allowed to access any of the existing pmem-resident files
+nor create new ones.
+XXX what does this mean for error handling?
+.sp
+.BI "pid_t fork(" void ");
+.br
+.sp
+.BI "RETURN VALUE"
+.RS 5
+As defined in the
+.B fork()
+man-page.
+.RE
+.BI ERRORS
+.RS 5
+As defined in the
+.B fork()
+man-page.
+.RE
+.br
+.sp
+.B vfork()
+is not supported.
+.sp
+.BI "pid_t vfork(" void ");
+.sp
+.BI "RETURN VALUE"
+.RS 5
+-1
+.RE
+.BI ERRORS
+.RS 5
+ENOSYS Not supported on this platform.
+.RE
+.br
+.SS I/O Event Notification
+.sp
+.BI "I/O event notification"
+is not supported, which includes the following system calls:
+.sp
+.BI "int epoll_ctl(int " epfd ", int" op ", int" fd ", struct epoll_event *" event );
+.br
+.BI "int epoll_wait(int " epfd ", struct epoll_event *" events ","
+.RS 15
+.BI "int " maxevents ", int " timeout);
+.RE
+.br
+.BI "int epoll_pwait(int " epfd ", struct epoll_event *" events ","
+.RS 16
+.BI "int " maxevents ", int " timeout ","
+.RE
+.RS 16
+.BI "const sigset_t *" sigmask );
+.RE
+.br
+.BI "int fanotify_mark(int " fanotify_fd ", unsigned int " flags ","
+.RS 18
+.BI "int " dirfd ", const char * " pathname );
+.RE
+.br
+.BI "int inotify_add_watch(int " fd ", const char *" pathname ", uint32_t "  mask );
+.br
+.BI "int inotify_rm_watch(int " fd ", int " wd );
+.br
+.BI "int poll(struct pollfd *" fds ", nfds_t " nfds ", int " timeout );
+.br
+.BI "int ppoll(struct pollfd *" fds ", nfds_t " nfds ","
+.RS 10
+.BI "const struct timespec *" timeout_ts ", const sigset_t *" sigmask );
+.RE
+.BI "int select(int " nfds ", fd_set *" readfds ", fd_set *" writefds ","
+.RS 11
+.BI "fd_set *" exceptfds ", struct timeval *" timeout );
+.RE
+.BI "int pselect(int " nfds ", fd_set *" readfds ", fd_set *" writefds ","
+.RS 12
+.BI "fd_set * " exceptfds ", const struct timespec * " timeout ","
+.RE
+.RS 12
+.BI "const sigset_t * " sigmask );
+.RE
+.BI "void FD_CLR(int " fd ", fd_set *" set );
+.br
+.BI "int FD_ISSET(int " fd ", fd_set *" set );
+.br
+.BI "void FD_SET(int " fd ", fd_set *" set );
+.br
+.BI "void FD_ZERO(fd_set *" set );
+.sp
+.BI "RETURN VALUE"
+.RS 5
+-1
+.RE
+.BI ERRORS
+.RS 5
+XXX what do I return here? The functions have different return values. And
+none are ENOTSUP.
+.RE
+.SS Program Execution
+.BI "Execution of a program"
+is not supported when the executable file is a pmem-resident file.
+.sp
+.BI "int execve(const char *" filename ", char * const " argv[] ","
+.RS 11
+.BI "char *const "  envp[] );
+.RE
+.sp
+.BI "RETURN VALUE"
+.RS 5
+-1 on error. On success,
+.B execve()
+does not return.
+.br
+.RE
+.BI ERRORS
+.RS 5
+EACCESS Execute permission is denied for pmem resident files. Otherwise as defined
+in the
+.B execve()
+man-page.
+.RE
+.br
+.SS Extended Attributes
+.BI "libpmemfile"
+does not support extended attributes. The following system calls are not
+supported.
+.sp
+.BI "ssize_t lgetxattr(const char *" path ", const char *" name ", void  *" value ","
+.RS 18
+.BI "size_t " size );
+.RE
+.br
+.BI "ssize_t fgetxattr(int"  fd ", const char *" name ", void *" value ", size_t " size );
+.br
+.BI "ssize_t listxattr(const char *" path ", char *" list ", size_t " size );
+.br
+.BI "ssize_t llistxattr(const char *" path ", char *" list ", size_t " size );
+.br
+.BI "ssize_t flistxattr(int " fd ", char *"  list ", size_t " size );
+.br
+.BI "int setxattr(const char *" path ", const char *" name ", const void *" value ","
+.RS 13
+.BI "size_t " size ", int " flags );
+.RE
+.br
+.BI "int lsetxattr(const char *" path ", const char *" name ", const void *" value ","
+.RS 14
+.BI "size_t " size ", int "  flags );
+.RE
+.br
+.BI "int fsetxattr(int " fd ", const char *" name ", const void *" value ", size_t " size ","
+.RS 14
+.BI "int " flags );
+.RE
+.sp
+.BI "RETURN VALUE"
+.RS 5
+ -1
+.RE
+.BI ERRORS
+.RS 5
+ENOTSUP Not supported.
+.RE
+.SS Flushing of Data and Meta-data
+.br
+.BI "Flushing"
+.br
+All writes are synchronous with
+.B libpmemfile.
+If an error occurs when writing data or meta data it will be seen during the
+.B write() system call.
+.sp
+.BI "void sync(" void ");
+.sp
+.BI "RETURN VALUE"
+.RS 5
+0. Always successful.
+.RE
+.BI ERRORS
+.RS 5
+None.
+.RE
+.br
+.sp
+.BI "int sync_file_range(int "  fd ", off64_t " offset ", off64_t " nbytes ","
+.RS 20
+.BI "unsigned int " flags );
+.RE
+.br
+.BI "The Following Flags"
+.IP \[bu]
+.B SYNC_FILE_RANGE_WAIT_BEFORE
+.IP \[bu]
+.B SYNC_FILE_RANGE_WRITE
+.IP \[bu]
+.B  SYNC_FILE_RANGE_WAIT_AFTER
+.RE
+.br
+Are not supported. Specifying the flags as 0 is permitted.
+.sp
+.BI "int syncfs(int " fd );
+.br
+.BI "int fsync(int " fd );
+.br
+.BI "int fdatasync(int " fd );
+.sp
+.B libpmemfile
+supports these system calls.
+.sp
+.BI "RETURN VALUE"
+.RS 5
+0 or -1
+.RE
+.BI ERRORS
+.RS 5
+As defined in the respective man-page . Errors that will never be returned:
+.IP \[bu]
+EIO
+.RE
+.SS Special Files
+.BI "The system calls "
+that manage block or character special files are not supported.
+.sp
+.BI "int mknod(const char *" pathname ", mode_t " mode ", dev_t " dev );
+.br
+.BI "int mknodat(int " dirfd ", const char *" pathname ", mode_t " mode ", dev_t " dev );
+.sp
+.BI "RETURN VALUE"
+.RS 5
+-1
+.RE
+.BI ERRORS
+.RS 5
+EACCESS No write permission.
+.RE
+.SS Mapping Devices into Memory
+.BI "The mmap()"
+system call is not supported.
+.sp
+.BI "void *mmap(void *" addr ", size_t " length ", int " prot ", int " flags ","
+.RS 11
+.BI "int " fd ", off_t " offset );
+.RE
+.sp
+.BI "RETURN VALUE"
+.RS 5
+-1
+.RE
+.BI ERRORS
+.RS 5
+ENODEV No such device.
+.RE
+.sp
+.SS Create, Open and Close Files
+.BI "The open() and creat()"
+system calls are supported. Noted in this section are the flags and mode
+bits that are not supported or have modified behavior.
+.sp
+.BI "int open(const char *" pathname ", int " flags );
+.br
+.BI "int open(const char *" pathname ", int " flags ", mode_t " mode );
+.br
+.BI "int creat(const char* " pathname ", mode_t " mode );
+.br
+.BI "int openat(int " dirfd ", const char * " pathname ", int " flags );
+.br
+.BI "int openat(int " dirfd ", const char * " pathname ", int " flags ", mode_t "  mode );
+.br
+.BI "int name_to_handle_at(int " dirfd ", const char *"pathname ","
+.RS 22
+.BI "struct file_handle *"handle ","
+.RE
+.RS 22
+.BI "int * " mount_id ", int " flags );
+.RE
+.br
+.BI "int open_by_handle_at(int " mount_fd ", struct file_handle *" handle ","
+.RS 21
+.BI "int " flags );
+.RE
+.sp
+.BI "Flags and Mode Bits"
+.IP \[bu]
+.B O_ASYNC
+.RS 10
+.B libpmemfile
+acts as if this flag is always set.
+.RE
+.IP \[bu]
+.B O_CLOEXEC
+.B libpmemfile
+acts as if this flag is always set.
+.IP \[bu]
+.B O_DIRECT
+.B libpmemfile
+acts as if this flag is always set.
+.sp
+.BI NOTE:
+Used generally when apps manage their own caches. Such as SQL. No issue
+in this case.
+.RE
+.IP \[bu]
+.B O_NOATIME
+.RS 10
+Supported.
+.RE
+.IP \[bu]
+.B O_NONBLOCK or O_NDELAY
+.RS 10
+.B libpmemfile
+acts as if this flag is always set.
+.RE
+.IP \[bu]
+.B O_NOCTTY
+.RS 10
+.B Not supported.
+.RE
+.IP \[bu]
+.B O_PATH
+.RS 10
+This flag will behave the same as is documented in the
+.B open()
+man-page. However, the use of the file descriptor returned as a result of
+this flag cannot be used to pass to another process via a UNIX domain socket.
+.B libpmemfile
+does not provide UNIX socket support.
+.RE
+.IP \[bu]
+.B O_SYNC, O_DSYNC
+.RS 10
+.B libpmemfile
+acts as if these flags are always set.
+.RE
+.sp
+.BI "Mode flags"
+.sp
+.B See beginning of this man-page.
+.sp
+.BI "RETURN VALUE"
+.RS 5
+-1 in the case of the unsupported flags. Otherwise as defined in the
+.B open()
+man-page.
+.RE
+.BI ERRORS
+.RS 5
+EINVAL in the case of unsupported flags. Otherwise as defined in the
+.B open()
+man-page.
+.br
+.SS File Locking
+.B flock()
+is not supported.
+.sp
+.BI "int flock(int " fd ", int " operation );
+.sp
+.BI "RETURN VALUE"
+.RS 5
+-1
+.RE
+.BI ERRORS
+.RS 5
+EINVAL Operation is invalid
+.RE
+.sp
+.SS File Descriptor Manipulation
+.br
+.B fcntl()
+is supported with the following exceptions noted below.
+.sp
+.BI "int fcntl(int " fd ", int " cmd ", ... /* " arg " */ );"
+.sp
+.B Duplicating File Descriptors
+.IP \[bu]
+F_DUPFD_CLOEXEC
+.RS 10
+.B libpmemfile
+acts as if this flag is always set.
+.RE
+.sp
+.B File Descriptor Flags
+.IP \[bu]
+F_SETFD
+.RS 10
+is supported.  Currently, the only flag supported is
+.B O_CLOEXEC.
+.B libpmemfile
+acts as if this flag is always set.
+.RE
+.sp
+.B File Status
+.IP \[bu]
+F_SETFL
+Is supported.
+.br
+.B libpmemfile
+acts as if these flags are always set:
+.RS 10
+.IP \[bu]
+O_ASYNC
+O_DIRECT
+O_NONBLOCK
+.RE
+.sp
+.B Locking
+.IP \[bu]
+F_SETLK, F_SETLKW, F_GETLK
+.RS 10
+Not supported.
+.RE
+.sp
+.IP \[bu]
+F_SETOWN, F_GETOWN_EX, F_SETOWN_EX
+.RS 10
+Not supported.
+.RE
+.IP \[bu]
+.B F_GETSIG, F_SETSIG
+.RS 10
+Not supported.
+.RE
+.IP \[bu]
+.B F_SETLEASE, F_GETLEASE
+.RS 10
+Not supported.
+.RE
+.IP \[bu]
+.B F_NOTIFY
+.RS 10
+Not supported.
+.RE
+.IP \[bu]
+.B MANDATORY LOCKS
+.RS 10
+Not Supported
+.RE
+.sp
+.BI "RETURN VALUE"
+.RS 5
+-1 for all flags not supported. Otherwise as defined in the
+.B fcntl()
+man-page.
+.RE
+.BI ERRORS
+.RS 5
+EFAULT for flags noted as not supported. Otherwise as defined in the
+.B fcntl()
+man-page.
+.RE
+.SS Duplication of File Descriptors
+.sp
+.B libpmemfile
+supports duplication of file descriptors.
+.B dup3()
+Allows the user to force the setting of the O_CLOEXEC flag.
+.B libpmemfile
+assumes this flag is always set. Therefore using this system call
+us not necessary but is supported.
+.BI "int dup3(int " oldfd ", int " newfd ", int " flags );
+.sp
+.BI "RETURN VALUE"
+.RS 5
+As specified in the dup3() man-page.
+.RE
+.BI ERRORS
+.RS 5
+As specified in the
+.B dup3()
+ man-page.
+.RE
+.SS File I/O
+.BI "All File I/O"
+operations are supported except as specified.
+.sp
+.br
+.B readahead()
+is supported. However libpmemfile does not use page caching, and all files
+are pmem-resident so disk I/O is never an issue.
+.br
+.sp
+.BI "ssize_t readahead(int " fd ", off64_t " offset ", size_t " count );
+.sp
+.BI "RETURN VALUE"
+.RS 5
+As defined in the
+.B readahead()
+man-page
+.RE
+.BI ERRORS
+.RS 5
+As defined in the
+.B readahead()
+man-page.
+.RE
+.sp
+.B sendfile()
+is supported except in the case where one of the file descriptors
+is not a pmem-resident file.
+.sp
+.BI "ssize_t sendfile(int " out_fd ", int " in_fd ", off_t *" offset ", size_t " count );
+.sp
+.BI "RETURN VALUE"
+.RS 5
+-1 in the case where one of the file descriptors resides in a non pmem-resident
+file system. Otherwise as defined in the
+.B sendfile()
+man-page.
+.RE
+.BI ERRORS
+.RS 5
+EBADF Bad File Descriptor
+.br
+in the case of one of the files in a non pmem-resident file system.
+.br
+Otherwise as defined in the
+.B sendfile()
+man-page.
+.RE
+.sp
+.B splice()
+is supported if both the out_fd and in_fd file descriptors are pmem-resident
+files.
+.sp
+.BI "ssize_t splice(int " fd_ian ", loff_t * " off_in ", int " fd_out ","
+.RS 15
+.BI "loff_t *" off_out ", size_t " len ", unsigned int " flags );
+.RE
+.B Splice Flags
+.IP \[bu]
+SPLICE_F_MOVE
+.RS 10
+Not Supported
+.RE
+.IP \[bu]
+SPLICE_F_NONBLOCK
+SLICE_F_MORE
+.RS 10
+.B libpmemfile
+acts as if these flags are always set.
+.RE
+.sp
+.BI "RETURN VALUE"
+.RS 5
+-1 in the case that one of the file descriptors is not a pmem-resident file.
+Otherwise as defined in the
+.B splice() man-page.
+.RE
+.BI ERRORS
+.RS 5
+EINVAL Target file system does not support this operation.  Otherwise as defined
+in the
+.B splice()
+man-page.
+.RE
+.sp
+.B tee()
+is not supported.
+XXX look at what breaks if this isn't supported.
+What applications we are going to test?
+.sp
+.BI "size_t tee(int "  fd_in ", int " fd_out ", size_t " len ", unsigned int " flags );
+.sp
+.BI "RETURN VALUE"
+.RS 5
+-1
+.RE
+.BI ERRORS
+.RS 5
+EINVAL Invalid operation.
+.RE
+.sp
+.B rename() and all related system calls
+are supported except in the case where one of the paths
+is not located in the same pmem file system.
+.sp
+.BI "int rename(const char *" oldpath ", const char *"newpath );
+.br
+.BI "int renameat(int " olddirfd ", const char *" oldpath ","
+.RS 13
+.BI "int " newdirfd ", const char *" newpath );
+.RE
+.BI "int renameat2(int " olddirfd ", const char *" oldpath ","
+.RS 13
+.BI "int " newdirfd ", const char *" newpath );
+.RE
+.sp
+.BI "RETURN VALUE"
+.RS 5
+-1 For the error case specified above. Otherwise as defined in the
+respective man-page.
+.RE
+.BI ERRORS
+.RS 5
+As defined in the respective man-page . Errors that will never be returned:
+.IP \[bu]
+EROFS
+.IP \[bu]
+EPERM or EACCESS
+.B in the case both file descriptors are valid and are pmem-resident
+files.
+.RE
+.sp
+EACCESS when both files are not pmem-resident files.   Otherwise as defined
+in the respective man-page.
+.sp
+.SS Miscellaneous
+.B libpmemfile
+does not support the following:
+.sp
+.BI "int chroot(const char *" path );
+.br
+.BI "int ioctl(int " d ", int " request "," ... );
+.br
+.BI "int pivot_root(const char *" new_root ", const char* " put_old );
+.br
+.BI "int swapon(const char *" path ", int " swapflags );
+.br
+.BI "int swapoff(const char *" path );
+.sp
+.BI "RETURN VALUE"
+.RS 5
+-1
+.RE
+.BI ERRORS
+.RS 5
+chroot()
+.RE
+.RS 10
+EPERM Insufficient privilege.
+.RE
+.RS 5
+ioctl()
+.RE
+.RS 10
+EFAULT Requesting an inaccessible memory area.
+.RE
+.RS 5
+pivot_root()
+.RE
+.RS 10
+EPERM Insufficient privilege.
+.RE
+.RS 5
+swapon()
+.br
+swapoff()
+.RE
+.RS 10
+EINVAL Invalid Path
+.RE
+.SS Sockets
+.B libpmemfile
+does not support socket operations.
+.sp
+.BI "int getsockname(int " sockfd ", struct sockaddr * " addr ", socklen_t * "addrlen );
+.br
+.BI "int getsockopt(int " sockfd ", int " level ", int " optname ",
+.RS 15
+.BI "void * " optval ", socklen_t * " optlen );
+.RE
+.br
+.BI "int setsockopt(int " sockfd ", int " level ", int " optname ",
+.RS 15
+.BI "const void * " optval ", socklen_t" optlen );
+.RE
+.BI "RETURN VALUE"
+.RS 5
+-1 In all cases.
+.RE
+.BI ERRORS
+.RS 5
+EFAULT Not supported.
+.RE
+.SS Asynchronous I/O
+Support for asynchronous I/O is TBD.
