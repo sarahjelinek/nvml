@@ -1,0 +1,14 @@
+# Makefile for intercept
+#
+CFLAGS = -std=gnu99 -Wall -Werror -fPIC -O0 -ggdb -DDEBUG
+
+all:  tester
+
+tester: tester.o
+	$(CC) -o tester tester.o
+
+clobber: clean
+	rm -f tester
+
+clean:
+	rm -f *.o core a.out

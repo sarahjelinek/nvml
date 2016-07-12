@@ -1,3 +1,4 @@
+#
 # Copyright 2016, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
@@ -27,18 +28,13 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
 #
-# src/libpmemfile/libpmemfile_core_intercept/Makefile -- Makefile for libpmemfile-intercept
 #
-
-LDFLAGS += -L /home/sjelinek/ws/sarah_nvml/src/nondebug -L /home/sjelinek/ws/sarah_nvml/src/debug
-LIBRARY_NAME = pmemfile-intercept
-LIBRARY_SO_VERSION = 1
-LIBRARY_VERSION = 0.0
-SOURCE = pmemfile-intercept.c $(COMMON)/out.c $(COMMON)/util.c $(COMMON)/util_linux.c
-
-LIBS += -lpmemobj -lpmemfile-core
-CFLAGS += -D_GNU_SOURCE  -I../.. -I../../libpmemobj -I../../include -I ../corelib -w
-
-include ../../Makefile.inc
+# src/libpmemfile/corelib/libpmemfile-intercept.map -- linker map file for libpmemfile-intercept
+#
+{
+	global:
+		*;	
+	local:
+		*;
+};
