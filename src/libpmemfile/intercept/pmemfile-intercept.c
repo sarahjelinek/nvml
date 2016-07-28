@@ -22,7 +22,6 @@
 #include "intercept_run.h"
 #include "libpmemfile-core.h"
 #include "libpmemobj.h"
-#include "runtime.h"
 #include "out.h"
 #include "sys_util.h"
 #include "util.h"
@@ -35,6 +34,8 @@
 #define PMEMFILE_LOG_FILE_VAR "PMEMFILEINTERCEPT_LOG_FILE"
 
 #define LDBG	4
+
+PMEMfilepool *pfp;
 
 
 /*
@@ -67,28 +68,27 @@ pmemfile_intercept_read(int fd, void *buf, size_t count)
 static int
 pmemfile_intercept_open(const char *pathname, int flags, mode_t mode)
 {
-	//LOG(LDBG, "pathname %s flags 0x%x mode %o", pathname, flags, mode);
-	fprintf(stderr, "pmemfile_intercept_open pathname %s, flags %d, mode %o\n",
-		pathname, flags, mode);
+	int fd;
 	PMEMfile *filep;
-	PMEMfilepool *pfp = pmemfile_pool_open(PMEMFILE_FS);
-	
-	if (pfp != NULL) {
-		//LOG(LDBG, "pmemfile_intercept_open pool %p", pfp);
-		filep = pmemfile_open(pfp, pathname, flags, mode);
-		fprintf(stderr, "filep %p\n", filep);
-	} else {
-		//LOG(LDBG, "pmemfile_pool_open failed pathname %s", pathname);
-		return 0;
-	}
-	//fprintf(stderr, "filep %p\n", filep);
-	//return filep->fileno;
+	ssize_t retval;
 
-	//fprintf(stderr, "pmemfile_intercept_open pathname %s, flags %d, mode %o\n",
-			//pathname, flags, mode);
-	//ssize_t retval = syscall(SYS_open, pathname, flags, mode);
-        //return retval;	
-	return 30;
+	if (!strncmp(pathname, PMEMFILE_FS, strlen(PMEMFILE_FS))) {
+		if (pfp != NULL) {
+			fprintf(stderr, "pmemfile_intercept_open: pool %p\n", pfp);
+			filep = pmemfile_open(pfp, pathname, flags, mode);
+			fprintf(stderr, "pmemfile_intercept_open: filep %p\n", filep);
+			return -1;
+		} else {
+			fprintf(stderr, "libpmemfile_intercept_open: could not open \
+					pool\n");
+			fflush(stderr);
+			return -1;
+		}
+	} else {
+		fprintf(stderr, "pmemfile_intercept_open pathname %s\n", pathname);
+		retval = syscall(SYS_open, pathname, flags);
+		return retval;
+	}
 }
 
 /*
@@ -141,11 +141,16 @@ libpmemfile_inercept_init(void)
 	out_init(PMEMFILE_LOG_PREFIX, PMEMFILE_LOG_LEVEL_VAR, PMEMFILE_LOG_FILE_VAR,
 		PMEMFILE_MAJOR_VERSION, PMEMFILE_MINOR_VERSION);
 	LOG(LDBG, NULL);
+	fprintf(stderr, "libpmemfile_intercept_init\n");
 
 	/* Create the pool if it doesn't exis. TODO: This is temporary */
-	if (access(PMEMFILE_FS, F_OK) != 0)
-		(void)pmemfile_mkfs(PMEMFILE_FS, PMEMOBJ_MIN_POOL, 
+	if (access(PMEMFILE_FS, F_OK) != 0) {
+		pfp = pmemfile_mkfs(PMEMFILE_FS, PMEMOBJ_MIN_POOL, 
 				    S_IWUSR | S_IRUSR);
+	} else {
+		pfp = pmemfile_pool_open(PMEMFILE_FS);
+		fprintf(stderr, "pfp %p\n", pfp);
+	}
 	pmemfile_patch((void *) open, (void *) pmemfile_intercept_open);
 	pmemfile_patch((void *) write, (void *) pmemfile_intercept_write);
 	pmemfile_patch((void *) read, (void *) pmemfile_intercept_read);

@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
 
 int
 main(int argc, char *argv[])
@@ -14,7 +15,10 @@ main(int argc, char *argv[])
 	char buf[8192];
 
 	fprintf(stderr, "Hello from main\n");
-	FILE *fp = fopen("/mnt/pmem/pmemfs/sarah", "w+");
+	int fd = open("/mnt/pmem/pmemfs/sarah", O_CREAT, O_RDWR);
+	return -1;
+	fprintf(stderr, "fd: %d\n", fd);
+	FILE *fp = fopen("/mnt/pmem/pmemfs/sarah", "r+");
 	fprintf(stderr, "opened file %p\n", fp);
   	size_t w = fwrite(msg, 1, strlen(msg) + 1, fp);
 	fprintf(stderr, "bytes written from %lu\n", w);

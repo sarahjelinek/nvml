@@ -32,7 +32,7 @@
 # src/libpmemfile/Makefile -- Makefile for libpmemfile project
 #
 
-TARGETS = corelib
+TARGETS = corelib intercept
 CLEAN_TARGETS = $(TARGETS)
 CLOBBER_TARGETS = $(TARGETS)
 CSTYLE_TARGETS = $(TARGETS)
