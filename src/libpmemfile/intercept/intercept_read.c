@@ -29,56 +29,16 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef PMEMFILE_INTERCEPT_RUN_H
-#define PMEMFILE_INTERCEPT_RUN_H
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <stdint.h>
-#include <linux/types.h>
-#include <pthread.h>
+#include "intercept.h"
 
-typedef struct {
-	int counter;
-} atomic_t; 
+ssize_t
+intercept_read(PMEMfilepool *pfp, PMEMfile *filep, void *buf, size_t count)
+{
 
+	ssize_t result = pmemfile_read(pfp, filep, buf, count);
+	LOG(LDBG, "result read %lu", result);
+	return result;
 
-/*
- * Intercept layer runtime data structures
- */
-
-/*
- * File descriptor structure
- */
-struct pmemfile_file { 
-	struct list_head	*list;
-        struct dentry           *dentry;
-        struct file_operations  *op;
-        atomic_t                count;
-        unsigned int            flags;
-        mode_t                  mode;
-        loff_t                  pos;
-        unsigned int            uid;
-	unsigned int		gid;
-        unsigned long           version;
-        void                    *private_data; 
-};
-	
-/*
- * Open file table structure
- */
-struct pmemfile_openfiles {
-        atomic_t count; /* Reference count to file */
-        pthread_rwlock_t file_lock;
-        int max_fds;
-        int max_fdset;
-        int next_fd;
-        struct pmemfile_file **fd;      /* current fd array */
-        fd_set *close_on_exec;
-        fd_set *open_fds; // bitmap for current open file.
-        struct pmemfile_file *openfd_array[100]; /* array of open files */
-};
-
-#endif
+}
 

@@ -35,7 +35,9 @@
 LIBRARY_NAME = pmemfile-intercept
 LIBRARY_SO_VERSION = 1
 LIBRARY_VERSION = 0.0
-SOURCE = pmemfile-intercept.c $(COMMON)/out.c $(COMMON)/util.c $(COMMON)/util_linux.c
+SOURCE = pmemfile-intercept.c intercept_open.c intercept_write.c intercept_read.c \
+	 intercept_close.c $(COMMON)/out.c $(COMMON)/util.c $(COMMON)/util_linux.c \
+	 ../../libpmemobj/ctree.c
 
 LIBS += -lpmemobj -lpmemfile-core
 CFLAGS += -D_GNU_SOURCE  -I../.. -I../../libpmemobj -I../../include -w

@@ -6,34 +6,33 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 int
 main(int argc, char *argv[])
 {
 	char *msg = "Hello World"; 
-	char *msg1 = "Hello World Again"; 
+	char *msg1 = "Goodbye World"; 
 	char buf[8192];
+	int fd;
+
 
 	fprintf(stderr, "Hello from main\n");
-	int fd = open("/mnt/pmem/pmemfs/sarah", O_CREAT, O_RDWR);
-	return -1;
-	fprintf(stderr, "fd: %d\n", fd);
-	FILE *fp = fopen("/mnt/pmem/pmemfs/sarah", "r+");
-	fprintf(stderr, "opened file %p\n", fp);
-  	size_t w = fwrite(msg, 1, strlen(msg) + 1, fp);
+	fd = open("./aaa.sarah", O_CREAT, O_RDWR);
+  	ssize_t w = write(fd, msg, strlen(msg));
 	fprintf(stderr, "bytes written from %lu\n", w);
-  	fseek(fp, 0, SEEK_SET);
-  	size_t r = fread(buf, 1, sizeof(buf) - 1, fp);
-  	fprintf(stderr, "number of bytes read %lu\n", r);
-  	fprintf(stderr, "bytes read %s\n", buf);
-  	fclose(fp);
-  	fp = fopen("/mnt/pmem/pmemfs/foo1", "w+");
-  	size_t z = fwrite(msg1, 1, strlen(msg1) + 1, fp);
-	fseek(fp, 0,SEEK_SET);
-  	fprintf(stderr, ".oo1 number of bytes written %lu\n", z);
-	z = fread(buf, 1, sizeof(buf) - 1, fp);
-	fprintf(stderr, "Number of bytes read from foo1 %lu\n", z);
+  	close(fd);
+	fd = open("./aaa.sarah", O_CREAT, O_RDWR);
+  	ssize_t r = read(fd, buf, sizeof(buf) - 1);
+  	fprintf(stderr, "bytes read %lu %s\n", r, buf);
+	close(fd);
+  	fd = open("./aaa.foo1", O_CREAT, O_RDWR);
+  	ssize_t z = write(fd, msg, strlen(msg1) + 1);
+  	fprintf(stderr, "foo1 number of bytes written %lu\n", z);
+	close(fd);
+  	fd = open("./aaa.foo1", O_CREAT, O_RDWR);
+	z = read(fd, buf, sizeof(buf) - 1);
 	fprintf(stderr, "Bytes read from foo1 %s\n", buf);
-	fclose(fp);
+	close(fd);
 	exit(0);
 }
