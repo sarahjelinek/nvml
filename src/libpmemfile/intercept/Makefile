@@ -40,6 +40,6 @@ SOURCE = pmemfile-intercept.c intercept_open.c intercept_write.c intercept_read.
 	 ../../libpmemobj/ctree.c
 
 LIBS += -lpmemobj -lpmemfile-core
-CFLAGS += -D_GNU_SOURCE  -I../.. -I../../libpmemobj -I../../include -w
+CFLAGS += -D_GNU_SOURCE  -I../.. -I../../libpmemobj -I../../include
 
 include ../../Makefile.inc

@@ -21,12 +21,15 @@
 
 #include "intercept.h"
 
-#define PMEMFILE_FS "./aaa"
+#define PMEMFILE_FS "pmemfile_pool/pool1"
 //#define UNUSED(x) (void)(x)
 
 #define PMEMFILE_INT_LOG_PREFIX "libpmemfile-intercept"
 #define PMEMFILE_INT_LOG_LEVEL_VAR "PMEMFILEINTERCEPT_LOG_LEVEL"
 #define PMEMFILE_INT_LOG_FILE_VAR "PMEMFILEINTERCEPT_LOG_FILE"
+
+static PMEMfilepool *pfp;
+static struct ctree *fd_list;
 
 
 /*
@@ -41,7 +44,7 @@ pmemfile_intercept_write(int fd, const void *buf, size_t count)
 	/*
 	 * Check to see if this fd is a pmem resident file.
 	 */
-	PMEMfile *filep = (PMEMfile *)ctree_find(fd_list, fd);
+	PMEMfile *filep = (PMEMfile *)(uintptr_t)ctree_find(fd_list, (uint64_t)fd);
 	LOG(LDBG, "filep %p", filep);
 	
 	if (filep != NULL)
@@ -58,9 +61,9 @@ pmemfile_intercept_write(int fd, const void *buf, size_t count)
 static ssize_t
 pmemfile_intercept_read(int fd, void *buf, size_t count)
 {
-	ssize_t retval = 0;
+	ssize_t retval = -1;
 
-	PMEMfile *filep = (PMEMfile *)ctree_find(fd_list, fd);
+	PMEMfile *filep = (PMEMfile *)(uintptr_t)ctree_find(fd_list, (uint64_t)fd);
 	LOG(LDBG, "filep %p\n", filep);
 
 	if (filep != NULL)
@@ -76,27 +79,23 @@ pmemfile_intercept_read(int fd, void *buf, size_t count)
 static ssize_t
 pmemfile_intercept_open(const char *pathname, int flags, mode_t mode)
 {
-	int fd;
-	PMEMfile *filep;
-	int retval;
+	ssize_t retval = -1;
 
-	LOG(LDBG, "pathname %s flags 0x%x mode %o", pathname, flags, mode);
-	if (!strncmp(pathname, PMEMFILE_FS, strlen(PMEMFILE_FS))) {
-		fd = intercept_open(pfp, pathname, flags, mode);
-		LOG(LDBG, "fd %d", fd);
-		return fd;
+	if (pfp) {
+		retval = intercept_open(pfp, fd_list, pathname, flags, mode);
 	} else {
 		retval = syscall(SYS_open, pathname, flags);
-		return retval;
 	}
+	return retval;
+	
 }
 
-static ssize_t 
+static ssize_t
 pmemfile_intercept_close(int fd)
 {
-	int ret;
+	ssize_t ret = 0;
 
-	PMEMfile *filep = (PMEMfile *)ctree_find(fd_list, fd);
+	PMEMfile *filep = (PMEMfile *)(uintptr_t)ctree_find(fd_list, (uint64_t)fd);
 	if (filep != NULL)
 		ret = intercept_close(pfp, filep);
 	else
@@ -115,7 +114,7 @@ pmemfile_intercept_close(int fd)
  * 	save off instructions overwritten to jump back if required.
  *		The saving of instructions requires that we disassmble
  * 		the function to ensure that we save off the correct
- * 		instructions. It is possible that we have to save off more
+ * 		instructions.  t is possible that we have to save off more
  *		than 5 bytes if an instruction in the 5 byte range is longer
  *		than 1 byte. The 5 bytes could fall into the middle of
  *		an instruction.
@@ -128,20 +127,29 @@ pmemfile_patch(void *from, void *to)
 {
 
 	LOG(LDBG, "pmemfile_patch");
+	fprintf(stderr, "pemmfile_patch from, to %p, %p\n", from, to);
 	unsigned long long pgbegin = (unsigned long long)from & PAGE_MASK;
         unsigned long long pgend = ((unsigned long long)from + 5) & PAGE_MASK;
 
         /* allow writes to the normally read-only code pages */
         if (mprotect((void *) pgbegin, pgend - pgbegin + PAGE_SIZE,
-                                PROT_READ|PROT_WRITE|PROT_EXEC) < 0)
+                                PROT_READ|PROT_WRITE|PROT_EXEC) < 0) {
+		fprintf(stderr, "mprotect failed for page %p starting for length,\
+			%llu\n",  (void *)pgbegin, pgend-pgbegin + PAGE_SIZE);
                 err(1, "intercept mprotect");
+	}
+
+	fprintf(stderr, "mprotect succeeded for page %p starting for length,\
+		%llu\n", (void *)pgbegin, pgend-pgbegin + PAGE_SIZE);
+	char *f = from;
+	char *t = to;
+	fprintf(stderr, "from, to %p, %p\n", f, t);
 
 	// unconditional jump opcode
-	*(unsigned long *)from = 0xe9;
+	*f = (char)0xe9; 
 
 	// store the relative address from this opcode to our hook function
-	*(unsigned long *)(from + 1) = 
-		(unsigned char *)to - (unsigned char *)from - 5;	
+	*(long *)(f + 1) = t - f - 5;	
 }
 /*
  * pmemflle_intercept_constructor -- constructor for intercept library
@@ -157,27 +165,33 @@ libpmemfile_inercept_init(void)
 			PMEMFILE_INT_MINOR_VERSION);
 	LOG(LDBG, NULL);
 
+	fd_list = ctree_new();
+
 	if (getenv("PMEMFILE_FS_SETUP")) {
 		/*
 		 * If we have not opened or created the pool and this is
 		 * a pmem resident file, do so now.
 		 */
 		if (pfp == NULL) {
+			fprintf(stderr, "pfp is null\n");
 			if (access(PMEMFILE_FS, F_OK) != 0) {
+				fprintf(stderr, "calling pmemfile_mkfs\n");
 				pfp = pmemfile_mkfs(PMEMFILE_FS, PMEMOBJ_MIN_POOL, 
 							S_IWUSR | S_IRUSR);
 			} else {
+				fprintf(stderr, "opening pool \n");
 				pfp = pmemfile_pool_open(PMEMFILE_FS);
 			}
+		} else {
+			fprintf(stderr, "pfp isn't null %p\n", pfp);
 		}
+		
 	}
 
+	pmemfile_patch((void *) write, (void *) pmemfile_intercept_write);
 	pmemfile_patch((void *) open,  (void *) pmemfile_intercept_open);
 	pmemfile_patch((void *) close, (void *) pmemfile_intercept_close);
-	pmemfile_patch((void *) write, (void *) pmemfile_intercept_write);
-	//pmemfile_patch((void *) read,  (void *) pmemfile_intercept_read);
-
-	fd_list = ctree_new();
+	pmemfile_patch((void *) read,  (void *) pmemfile_intercept_read);
 }
 
 /*

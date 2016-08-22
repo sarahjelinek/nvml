@@ -33,7 +33,8 @@
 #include "intercept.h"
 
 int
-intercept_open(PMEMfilepool *pfp, char *pathname, int flags, mode_t mode)
+intercept_open(PMEMfilepool *pfp, struct ctree *fd_list, const char *pathname,
+		int flags, mode_t mode)
 {
 
 	int fd;
@@ -43,10 +44,10 @@ intercept_open(PMEMfilepool *pfp, char *pathname, int flags, mode_t mode)
 	fd = open("/dev/null", O_RDWR);
 	LOG(LDBG, "fd %d", fd);
 
-	if (!ctree_find(fd_list, fd)) {
+	if (!ctree_find(fd_list, (uint64_t)fd)) {
 		LOG(LDBG, "ctree_find = false");
 		if (fd > 0) {
-			ctree_insert(fd_list, fd, filep);
+			ctree_insert(fd_list, (uint64_t)fd, (uintptr_t)filep);
 		}
 	}
 	return fd;

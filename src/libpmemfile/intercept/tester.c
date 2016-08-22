@@ -18,21 +18,21 @@ main(int argc, char *argv[])
 
 
 	fprintf(stderr, "Hello from main\n");
-	fd = open("./aaa.sarah", O_CREAT, O_RDWR);
+	fd = open("/aaa", O_CREAT, O_RDWR);
   	ssize_t w = write(fd, msg, strlen(msg));
-	fprintf(stderr, "bytes written from %lu\n", w);
+	fprintf(stderr, "bytes written to aaa%lu\n", w);
   	close(fd);
-	fd = open("./aaa.sarah", O_CREAT, O_RDWR);
+	fd = open("/aaa", O_CREAT, O_RDWR);
   	ssize_t r = read(fd, buf, sizeof(buf) - 1);
-  	fprintf(stderr, "bytes read %lu %s\n", r, buf);
+  	fprintf(stderr, "bytes read from aaa %lu %s\n", r, buf);
 	close(fd);
-  	fd = open("./aaa.foo1", O_CREAT, O_RDWR);
+  	fd = open("/bbb", O_CREAT, O_RDWR);
   	ssize_t z = write(fd, msg, strlen(msg1) + 1);
-  	fprintf(stderr, "foo1 number of bytes written %lu\n", z);
+  	fprintf(stderr, "bbb number of bytes written %lu\n", z);
 	close(fd);
-  	fd = open("./aaa.foo1", O_CREAT, O_RDWR);
+  	fd = open("/bbb", O_CREAT, O_RDWR);
 	z = read(fd, buf, sizeof(buf) - 1);
-	fprintf(stderr, "Bytes read from foo1 %s\n", buf);
+	fprintf(stderr, "Bytes read from bbb %s\n", buf);
 	close(fd);
 	exit(0);
 }

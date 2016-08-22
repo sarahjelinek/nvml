@@ -44,14 +44,25 @@
 #include "out.h"
 #include "sys_util.h"
 #include "util.h"
+#include "ctree.h"
 
 #define LDBG 4
 
 #define PMEMFILE_INT_MAJOR_VERSION 0
 #define PMEMFILE_INT_MINOR_VERSION 1
 
-static PMEMfile *pfp;
-static struct ctree *fd_list;
+ssize_t
+intercept_read(PMEMfilepool *pfp, PMEMfile *filep, void *buf, size_t count);
+
+ssize_t
+intercept_write(PMEMfilepool *pfp, PMEMfile *filep, const void *buf, size_t count);
+
+int
+intercept_open(PMEMfilepool *pfp, struct ctree *fd_list, const char *pathname,
+		int flags, mode_t mode);
+
+int
+intercept_close(PMEMfilepool *pfp, PMEMfile *filep);
 
 
 #endif
