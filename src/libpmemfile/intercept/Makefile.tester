@@ -1,6 +1,6 @@
 # Makefile for intercept
 #
-CFLAGS = -std=gnu99 -Wall -Werror -fPIC -O0 -ggdb -DDEBUG
+CFLAGS = -std=gnu99 -Wall -Werror -fPIC -O0 -ggdb -DDEBUG -w
 
 all:  tester
 

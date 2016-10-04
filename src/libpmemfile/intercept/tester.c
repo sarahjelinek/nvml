@@ -18,21 +18,32 @@ main(int argc, char *argv[])
 
 
 	fprintf(stderr, "Hello from main\n");
-	fd = open("/aaa", O_CREAT, O_RDWR);
-  	ssize_t w = write(fd, msg, strlen(msg));
-	fprintf(stderr, "bytes written to aaa%lu\n", w);
+	fd = open("pmemfile_pool/pool1/aaa", O_CREAT, O_RDWR);
+	if (fd < 0) {
+		fprintf(stderr, "open failed\n");
+		exit(1);
+	} else {
+		fprintf(stderr, "open succeeded: fd %d\n", fd);
+	}
+	
+  	//ssize_t w = write(fd, msg, strlen(msg));
+	//fprintf(stderr, "write %lu bytes to %d\n", w, fd);
   	close(fd);
-	fd = open("/aaa", O_CREAT, O_RDWR);
+	fprintf(stderr, "closed %d\n", fd);
+	fd = open("pmemfile_pool/pool1/aaa", O_CREAT, O_RDWR);
+	fprintf(stderr, "fd for aaa %d\n", fd);
   	ssize_t r = read(fd, buf, sizeof(buf) - 1);
-  	fprintf(stderr, "bytes read from aaa %lu %s\n", r, buf);
+	fprintf(stderr, "read %lu bytes from %d\n", r, fd);
 	close(fd);
-  	fd = open("/bbb", O_CREAT, O_RDWR);
-  	ssize_t z = write(fd, msg, strlen(msg1) + 1);
-  	fprintf(stderr, "bbb number of bytes written %lu\n", z);
+  	fd = open("pmemfile_pool/pool1/bbb", O_CREAT, O_RDWR);
+	fprintf(stderr, "fd for bbb %d\n", fd);
+  	//ssize_t z = write(fd, msg, strlen(msg1) + 1);
+	//fprintf(stderr, "write %lu bytes to %d\n", z, fd);
 	close(fd);
-  	fd = open("/bbb", O_CREAT, O_RDWR);
-	z = read(fd, buf, sizeof(buf) - 1);
-	fprintf(stderr, "Bytes read from bbb %s\n", buf);
+  	fd = open("pmemfile_pool/pool1/bbb", O_CREAT, O_RDWR);
+	ssize_t z = read(fd, buf, sizeof(buf) - 1);
+	fprintf(stderr, "fd for bbb %d\n", fd);
+	fprintf(stderr, "read %lu bytes to %d\n", z, fd);
 	close(fd);
 	exit(0);
 }

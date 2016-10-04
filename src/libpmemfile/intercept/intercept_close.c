@@ -35,7 +35,6 @@
 int
 intercept_close(PMEMfilepool *pfp, PMEMfile *filep)
 {
-	LOG(LDBG, NULL);
 	pmemfile_close(pfp, filep);
 	return 0;
 }

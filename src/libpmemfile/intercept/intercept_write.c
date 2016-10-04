@@ -34,6 +34,7 @@
  * If we get here we know we processing an file located on pmem.
  */
 
+#include <stdio.h>
 #include "intercept.h"
 
 /*
@@ -44,7 +45,6 @@ intercept_write(PMEMfilepool *pfp, PMEMfile *filep, const void *buf, size_t coun
 {
 
 	ssize_t result;
-	result 	= pmemfile_write(pfp, filep, buf, count);
-	LOG(LDBG, "size written %lu\n", result);
+ 	result = pmemfile_write(pfp, filep, buf, count);
 	return result;
 }

@@ -31,24 +31,51 @@
  */
 
 #include "intercept.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 int
 intercept_open(PMEMfilepool *pfp, struct ctree *fd_list, const char *pathname,
 		int flags, mode_t mode)
 {
 
-	int fd;
 	PMEMfile *filep;
+	int fd = 0;
+	int ret = 0;
+
+	extern int null_fd;
 
 	filep = pmemfile_open(pfp, pathname, flags, mode);
-	fd = open("/dev/null", O_RDWR);
-	LOG(LDBG, "fd %d", fd);
-
-	if (!ctree_find(fd_list, (uint64_t)fd)) {
-		LOG(LDBG, "ctree_find = false");
-		if (fd > 0) {
-			ctree_insert(fd_list, (uint64_t)fd, (uintptr_t)filep);
+	if (filep == NULL) {
+		return -1;
+	}
+	/* Talk to Marcin about a better inerface to get fd */
+	if (flags & O_CREAT) {
+		fd = dup(null_fd);
+		if (fd < 0) {
+			pmemfile_close(pfp, filep);
+			return fd;
+		} else {
+			ret = ctree_insert(fd_list, (uint64_t)fd, 
+					(uintptr_t)filep);
+			if (ret < 0) {
+				pmemfile_close(pfp, filep);
+				return -1;
+			}
+		}
+	} else {
+		fd = dup(null_fd);
+		if (fd < 0) {
+			pmemfile_close(pfp, filep);
+			return fd;
+		}
+		ret = ctree_insert(fd_list, (uint64_t)fd, (uintptr_t)filep);
+		if (ret < 0) {
+			pmemfile_close(pfp, filep);
+			return -1;
 		}
 	}
+		
 	return fd;
 }

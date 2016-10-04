@@ -38,6 +38,7 @@
 #include <stdint.h>
 #include <linux/types.h>
 #include <pthread.h>
+#include <err.h>
 
 #include "libpmemfile-core.h"
 #include "libpmemobj.h"

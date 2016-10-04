@@ -9,10 +9,10 @@ function soru {
 		echo "Setting environment varaibles"
 		export LD_LIBRARY_PATH=/home/sjelinek/ws/sarah_nvml/src/debug:$LD_LIBRARY_PATH
 		export LD_PRELOAD=libpmemfile-intercept.so
-		#export PMEMFILECORE_LOG_LEVEL=4
-		#export PMEMFILEINTERCEPT_LOG_LEVEL=4
-		#export PMEMFILECORE_LOG_FILE="/tmp/pmemfile_core_out.txt"
-		#export PMEMFILEINTERCEPT_LOG_FILE="/tmp/pmemfile_intercept_out.txt"
+		export PMEMFILECORE_LOG_LEVEL=4
+		export PMEMFILEINTERCEPT_LOG_LEVEL=4
+		export PMEMFILECORE_LOG_FILE="/tmp/pmemfile_core_out.txt"
+		export PMEMFILEINTERCEPT_LOG_FILE="/tmp/pmemfile_intercept_out.txt"
 		export PMEMFILE_FS_SETUP=1
 	elif [ $1 == "t" ]
 	    then

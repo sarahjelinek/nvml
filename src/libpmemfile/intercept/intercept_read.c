@@ -37,7 +37,6 @@ intercept_read(PMEMfilepool *pfp, PMEMfile *filep, void *buf, size_t count)
 {
 
 	ssize_t result = pmemfile_read(pfp, filep, buf, count);
-	LOG(LDBG, "result read %lu", result);
 	return result;
 
 }
